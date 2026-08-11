@@ -19,7 +19,6 @@ export default defineConfig({
           '_acc',
           '_centerOnAlive',
           '_emit',
-          '_gridColor',
           '_onChange',
           '_renderQueued',
         ],

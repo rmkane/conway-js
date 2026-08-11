@@ -2,7 +2,10 @@ PNPM ?= pnpm
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install hooks precommit dev build preview format format-check lint test test-watch analyze analyze-full dead-code dupes check clean typecheck
+.PHONY: help install hooks precommit dev build preview format format-check lint test test-watch \
+	analyze analyze-full analyze-dead-code analyze-dupes analyze-health analyze-hotspots \
+	analyze-targets analyze-audit analyze-security analyze-flags analyze-list analyze-viz \
+	analyze-watch analyze-fix dead-code dupes check clean typecheck
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} \
@@ -49,17 +52,51 @@ test: ## Run Vitest once
 test-watch: ## Run Vitest in watch mode
 	$(PNPM) test:watch
 
-analyze: ## Fallow dead code + duplication
+analyze: ## Fallow dead code + duplication (CI gate)
 	$(PNPM) analyze
 
-analyze-full: ## Fallow dead code + dupes + health
+analyze-full: ## Fallow dead-code + dupes + health
 	$(PNPM) analyze:full
 
-dead-code: ## Fallow unused exports/files/deps
-	$(PNPM) exec fallow dead-code
+analyze-dead-code: ## Unused exports, files, deps, cycles
+	$(PNPM) analyze:dead-code
 
-dupes: ## Fallow duplicated code
-	$(PNPM) exec fallow dupes
+analyze-dupes: ## Copy-paste / structural duplication
+	$(PNPM) analyze:dupes
+
+analyze-health: ## Complexity, maintainability, file scores
+	$(PNPM) analyze:health
+
+analyze-hotspots: ## Complex + frequently changing files
+	$(PNPM) analyze:hotspots
+
+analyze-targets: ## Ranked refactoring targets
+	$(PNPM) analyze:targets
+
+analyze-audit: ## Changed-files review (PR-oriented)
+	$(PNPM) analyze:audit
+
+analyze-security: ## Security sink candidates (opt-in)
+	$(PNPM) analyze:security
+
+analyze-flags: ## Feature-flag usage patterns
+	$(PNPM) analyze:flags
+
+analyze-list: ## Discovered files, entry points, workspaces
+	$(PNPM) analyze:list
+
+analyze-viz: ## Write interactive HTML map (fallow-viz.html)
+	$(PNPM) analyze:viz
+
+analyze-watch: ## Re-run analysis as files change
+	$(PNPM) analyze:watch
+
+analyze-fix: ## Auto-fix safe unused-code findings
+	$(PNPM) analyze:fix
+
+dead-code: analyze-dead-code ## Alias for analyze-dead-code
+
+dupes: analyze-dupes ## Alias for analyze-dupes
 
 ##@ Gates
 

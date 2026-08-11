@@ -16,17 +16,25 @@ export function cloneAlive(alive: AliveSet): AliveSet {
   return new Set(alive)
 }
 
+function tallyNeighbors(
+  counts: Map<CellKey, number>,
+  x: number,
+  y: number,
+): void {
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue
+      const k = pack(x + dx, y + dy)
+      counts.set(k, (counts.get(k) || 0) + 1)
+    }
+  }
+}
+
 export function stepAlive(alive: AliveSet): AliveSet {
   const counts = new Map<CellKey, number>()
   for (const key of alive) {
     const [x, y] = unpack(key)
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dy === 0) continue
-        const k = pack(x + dx, y + dy)
-        counts.set(k, (counts.get(k) || 0) + 1)
-      }
-    }
+    tallyNeighbors(counts, x, y)
   }
 
   const next: AliveSet = new Set()

@@ -85,21 +85,21 @@ export function parseRotation(value: number): Rotation {
     : DEFAULTS.rot
 }
 
-function parseParams(validSpawn: (id: string) => boolean): LifeParams {
-  if (window.__LIFE_BOOT__) {
-    const boot = window.__LIFE_BOOT__
-    const sys = systemColors()
-    return {
-      ...boot,
-      fg: decodeColor(boot.fg, sys.fg),
-      bg: decodeColor(boot.bg, sys.bg),
-      mode: boot.mode === 'inspect' ? 'inspect' : 'spawn',
-      spawn: validSpawn(boot.spawn) ? boot.spawn : DEFAULTS.spawn,
-      rot: parseRotation(boot.rot),
-      anchor: boot.anchor === 'corner' ? 'corner' : 'center',
-    }
+function parseBootParams(validSpawn: (id: string) => boolean): LifeParams {
+  const boot = window.__LIFE_BOOT__!
+  const sys = systemColors()
+  return {
+    ...boot,
+    fg: decodeColor(boot.fg, sys.fg),
+    bg: decodeColor(boot.bg, sys.bg),
+    mode: boot.mode === 'inspect' ? 'inspect' : 'spawn',
+    spawn: validSpawn(boot.spawn) ? boot.spawn : DEFAULTS.spawn,
+    rot: parseRotation(boot.rot),
+    anchor: boot.anchor === 'corner' ? 'corner' : 'center',
   }
+}
 
+function parseUrlParams(validSpawn: (id: string) => boolean): LifeParams {
   const params = new URLSearchParams(location.search)
   const sys = systemColors()
   const spawnKey = params.get('spawn') || DEFAULTS.spawn
@@ -120,6 +120,12 @@ function parseParams(validSpawn: (id: string) => boolean): LifeParams {
     flipX: parseBool(params.get('flipX'), DEFAULTS.flipX),
     flipY: parseBool(params.get('flipY'), DEFAULTS.flipY),
   }
+}
+
+function parseParams(validSpawn: (id: string) => boolean): LifeParams {
+  return window.__LIFE_BOOT__
+    ? parseBootParams(validSpawn)
+    : parseUrlParams(validSpawn)
 }
 
 export function writeParams(

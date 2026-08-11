@@ -12,8 +12,8 @@ import {
   cloneAlive,
   pack,
   stepAlive,
-  unpack,
 } from '@/life/cells.ts'
+import { paintLife } from '@/life/paint.ts'
 import { patternOffsets } from '@/life/pattern.ts'
 import { randomSoup } from '@/life/rng.ts'
 
@@ -249,112 +249,21 @@ export class Conway {
   }
 
   render(): void {
-    const { canvas, ctx, cellSize } = this
-    const dpr = window.devicePixelRatio || 1
-    const cssW = canvas.clientWidth
-    const cssH = canvas.clientHeight
-    if (cssW < 1 || cssH < 1) return
-
-    const pixelW = Math.floor(cssW * dpr)
-    const pixelH = Math.floor(cssH * dpr)
-    if (canvas.width !== pixelW || canvas.height !== pixelH) {
-      canvas.width = pixelW
-      canvas.height = pixelH
-    }
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.fillStyle = this.background
-    ctx.fillRect(0, 0, cssW, cssH)
-
-    const cols = Math.ceil(cssW / cellSize) + 1
-    const rows = Math.ceil(cssH / cellSize) + 1
-    const ox = Math.floor(this.originX - cols / 2)
-    const oy = Math.floor(this.originY - rows / 2)
-
-    if (this.showGrid) {
-      ctx.strokeStyle = this._gridColor()
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      for (let c = 0; c <= cols; c++) {
-        const px = Math.round(c * cellSize) + 0.5
-        ctx.moveTo(px, 0)
-        ctx.lineTo(px, cssH)
-      }
-      for (let r = 0; r <= rows; r++) {
-        const py = Math.round(r * cellSize) + 0.5
-        ctx.moveTo(0, py)
-        ctx.lineTo(cssW, py)
-      }
-      ctx.stroke()
-    }
-
-    ctx.fillStyle = this.foreground
-    for (const key of this.alive) {
-      const [x, y] = unpack(key)
-      const sx = (x - ox) * cellSize
-      const sy = (y - oy) * cellSize
-      if (sx + cellSize < 0 || sy + cellSize < 0 || sx > cssW || sy > cssH)
-        continue
-      ctx.fillRect(sx, sy, cellSize, cellSize)
-    }
-
-    // Spawn mode: pattern ghost. Inspect mode: single-cell highlight.
-    if (this.mode === 'spawn' && this.hoverCell && this.ghostTemplate?.length) {
-      const origin = anchorToOrigin(
-        this.hoverCell.x,
-        this.hoverCell.y,
-        this.ghostTemplate,
-        this.ghostAnchor,
-      )
-      let minDx = Infinity
-      let minDy = Infinity
-      let maxDx = -Infinity
-      let maxDy = -Infinity
-
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.38)'
-      ctx.strokeStyle = 'rgba(37, 99, 235, 0.55)'
-      ctx.lineWidth = 1
-      for (const [dx, dy] of this.ghostTemplate) {
-        minDx = Math.min(minDx, dx)
-        minDy = Math.min(minDy, dy)
-        maxDx = Math.max(maxDx, dx)
-        maxDy = Math.max(maxDy, dy)
-        const sx = (origin.x + dx - ox) * cellSize
-        const sy = (origin.y + dy - oy) * cellSize
-        if (sx + cellSize < 0 || sy + cellSize < 0 || sx > cssW || sy > cssH)
-          continue
-        ctx.fillRect(sx, sy, cellSize, cellSize)
-        ctx.strokeRect(sx + 0.5, sy + 0.5, cellSize - 1, cellSize - 1)
-      }
-
-      const boxX = (origin.x + minDx - ox) * cellSize
-      const boxY = (origin.y + minDy - oy) * cellSize
-      const boxW = (maxDx - minDx + 1) * cellSize
-      const boxH = (maxDy - minDy + 1) * cellSize
-      ctx.strokeStyle = 'rgba(37, 99, 235, 0.95)'
-      ctx.lineWidth = Math.max(2, Math.min(3, cellSize / 4))
-      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1)
-    } else if (this.hoverCell) {
-      const hx = (this.hoverCell.x - ox) * cellSize
-      const hy = (this.hoverCell.y - oy) * cellSize
-      if (
-        hx + cellSize >= 0 &&
-        hy + cellSize >= 0 &&
-        hx <= cssW &&
-        hy <= cssH
-      ) {
-        const alive = this.alive.has(pack(this.hoverCell.x, this.hoverCell.y))
-        ctx.fillStyle = alive
-          ? 'rgba(255, 220, 60, 0.45)'
-          : 'rgba(59, 130, 246, 0.35)'
-        ctx.fillRect(hx, hy, cellSize, cellSize)
-        ctx.strokeStyle = alive
-          ? 'rgba(255, 200, 0, 0.95)'
-          : 'rgba(37, 99, 235, 0.95)'
-        ctx.lineWidth = Math.max(1, Math.min(2, cellSize / 6))
-        ctx.strokeRect(hx + 0.5, hy + 0.5, cellSize - 1, cellSize - 1)
-      }
-    }
+    paintLife({
+      canvas: this.canvas,
+      ctx: this.ctx,
+      cellSize: this.cellSize,
+      foreground: this.foreground,
+      background: this.background,
+      showGrid: this.showGrid,
+      originX: this.originX,
+      originY: this.originY,
+      alive: this.alive,
+      mode: this.mode,
+      hoverCell: this.hoverCell,
+      ghostTemplate: this.ghostTemplate,
+      ghostAnchor: this.ghostAnchor,
+    })
   }
 
   setHoverCell(cell: Point | null): void {
@@ -412,18 +321,6 @@ export class Conway {
     const { minX, minY, maxX, maxY } = bbox(alive)
     this.originX = (minX + maxX + 1) / 2
     this.originY = (minY + maxY + 1) / 2
-  }
-
-  private _gridColor(): string {
-    const bg = this.background.trim()
-    if (bg.startsWith('#') && bg.length >= 7) {
-      const r = Number.parseInt(bg.slice(1, 3), 16)
-      const g = Number.parseInt(bg.slice(3, 5), 16)
-      const b = Number.parseInt(bg.slice(5, 7), 16)
-      const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-      return luma > 0.5 ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'
-    }
-    return 'rgba(127,127,127,0.35)'
   }
 
   private _emit(): void {

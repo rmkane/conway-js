@@ -13,6 +13,59 @@ export type ElProps = {
   style?: Record<string, string>
 }
 
+function assignIf<T>(
+  value: T | null | undefined,
+  apply: (value: T) => void,
+): void {
+  if (value != null) apply(value)
+}
+
+function setValue(node: HTMLElement, value: string): void {
+  if (node instanceof HTMLInputElement) node.value = value
+  else if (node instanceof HTMLOptionElement) node.value = value
+  else if (node instanceof HTMLSelectElement) node.value = value
+}
+
+function applyStyle(node: HTMLElement, style: Record<string, string>): void {
+  for (const [key, value] of Object.entries(style)) {
+    node.style.setProperty(key, value)
+  }
+}
+
+function applyProps(node: HTMLElement, props: ElProps): void {
+  assignIf(props.className, (v) => {
+    node.className = v
+  })
+  assignIf(props.id, (v) => {
+    node.id = v
+  })
+  assignIf(props.textContent, (v) => {
+    node.textContent = v
+  })
+  assignIf(props.title, (v) => {
+    node.title = v
+  })
+  assignIf(props.value, (v) => setValue(node, v))
+  assignIf(props.style, (v) => applyStyle(node, v))
+
+  if (props.type != null && node instanceof HTMLInputElement) {
+    node.type = props.type
+  }
+  if (props.selected != null && node instanceof HTMLOptionElement) {
+    node.selected = props.selected
+  }
+  if (props.href != null && node instanceof HTMLAnchorElement) {
+    node.href = props.href
+  }
+}
+
+function appendChildren(node: HTMLElement, children: ElChild[]): void {
+  for (const child of children) {
+    if (child == null || child === false) continue
+    node.append(typeof child === 'string' ? child : child)
+  }
+}
+
 /** Lightweight element factory: `el('div', { className }, childA, childB)`. */
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -20,38 +73,8 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   ...children: ElChild[]
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag)
-
-  if (props) {
-    if (props.className != null) node.className = props.className
-    if (props.id != null) node.id = props.id
-    if (props.textContent != null) node.textContent = props.textContent
-    if (props.title != null) node.title = props.title
-    if (props.type != null && node instanceof HTMLInputElement) {
-      node.type = props.type
-    }
-    if (props.value != null) {
-      if (node instanceof HTMLInputElement) node.value = props.value
-      else if (node instanceof HTMLOptionElement) node.value = props.value
-      else if (node instanceof HTMLSelectElement) node.value = props.value
-    }
-    if (props.selected != null && node instanceof HTMLOptionElement) {
-      node.selected = props.selected
-    }
-    if (props.href != null && node instanceof HTMLAnchorElement) {
-      node.href = props.href
-    }
-    if (props.style) {
-      for (const [key, value] of Object.entries(props.style)) {
-        node.style.setProperty(key, value)
-      }
-    }
-  }
-
-  for (const child of children) {
-    if (child == null || child === false) continue
-    node.append(typeof child === 'string' ? child : child)
-  }
-
+  if (props) applyProps(node, props)
+  appendChildren(node, children)
   return node
 }
 

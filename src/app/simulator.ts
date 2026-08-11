@@ -40,18 +40,25 @@ const statusPop = mustGet('#status-pop', HTMLElement)
 const statusCursor = mustGet('#status-cursor', HTMLElement)
 const statusState = mustGet('#status-state', HTMLElement)
 
+function readMode(): LifeParams['mode'] {
+  return modeSelect.value === 'inspect' ? 'inspect' : 'spawn'
+}
+
+function readAnchor(): LifeParams['anchor'] {
+  return spawnAnchorSelect.value === 'corner' ? 'corner' : 'center'
+}
+
 function formState(): LifeParams {
-  const rot = Number(spawnRotSelect.value) || 0
   return {
     seed: seedInput.value.trim() || newSeedValue(),
     zoom: clamp(Number(zoomInput.value), 2, 48),
     fg: fgInput.value,
     bg: bgInput.value,
     grid: gridInput.checked,
-    mode: modeSelect.value === 'inspect' ? 'inspect' : 'spawn',
+    mode: readMode(),
     spawn: spawnSelect.value,
-    rot: parseRotation(rot),
-    anchor: spawnAnchorSelect.value === 'corner' ? 'corner' : 'center',
+    rot: parseRotation(Number(spawnRotSelect.value) || 0),
+    anchor: readAnchor(),
     flipX: spawnFlipXInput.checked,
     flipY: spawnFlipYInput.checked,
   }
@@ -132,14 +139,28 @@ syncModeUi()
 game.render() // sync first paint before revealing UI
 revealUi()
 
+function runningLabels(running: boolean): {
+  state: string
+  play: string
+  pressed: string
+} {
+  if (running) return { state: 'running', play: 'Pause', pressed: 'true' }
+  return { state: 'paused', play: 'Play', pressed: 'false' }
+}
+
+function syncPlayUi(running: boolean): void {
+  const labels = runningLabels(running)
+  statusState.textContent = labels.state
+  playBtn.textContent = labels.play
+  playBtn.setAttribute('aria-pressed', labels.pressed)
+  prevBtn.disabled = running || game.generation === 0
+  nextBtn.disabled = running
+}
+
 function syncStatus(): void {
   statusGen.textContent = String(game.generation)
   statusPop.textContent = String(game.population)
-  statusState.textContent = game.running ? 'running' : 'paused'
-  playBtn.textContent = game.running ? 'Pause' : 'Play'
-  playBtn.setAttribute('aria-pressed', game.running ? 'true' : 'false')
-  prevBtn.disabled = game.running || game.generation === 0
-  nextBtn.disabled = game.running
+  syncPlayUi(game.running)
 }
 
 game.onChange(syncStatus)

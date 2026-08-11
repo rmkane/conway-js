@@ -19,6 +19,8 @@ make check      # format-check + lint + typecheck + test + analyze + build
 make precommit  # format-check + lint + test + typecheck (git hook)
 ```
 
+Fallow scripts (`pnpm analyze:*` / `make analyze-*`): `analyze` (dead-code+dupes, CI), `analyze:full`, `analyze:health`, `analyze:hotspots`, `analyze:targets`, `analyze:audit`, `analyze:security`, `analyze:list`, `analyze:viz`, `analyze:watch`, `analyze:fix`.
+
 CI (`.github/workflows/ci.yml`) runs the same gate on Node 24 with pnpm.
 
 ## Layout
@@ -42,7 +44,8 @@ src/
     pattern.ts             Shape rows → transformed offsets
     rng.ts                 Random soup (uses @conway/rng)
     data.ts                Pattern catalog
-    conway.ts              Canvas engine + interaction types
+    paint.ts               Canvas paint from a scene snapshot
+    conway.ts              Simulation engine + interaction types
   styles/
     main.css               Tailwind entry
     life-board.css         Gallery board CSS

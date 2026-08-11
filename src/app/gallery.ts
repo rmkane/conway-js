@@ -203,25 +203,27 @@ for (const groupName of groups) {
   )
 }
 
-function tick(now: number): void {
-  if (!running) {
-    requestAnimationFrame(tick)
-    return
-  }
-
+function generationProgress(now: number): number {
   if (!generationStartedAt) generationStartedAt = now
+  const t = (now - generationStartedAt) / generationDuration
+  if (t < 1) return t
+  for (const item of rendered) commitGeneration(item)
+  generationStartedAt = now
+  return 0
+}
 
-  let t = (now - generationStartedAt) / generationDuration
-  if (t >= 1) {
-    for (const item of rendered) commitGeneration(item)
-    generationStartedAt = now
-    t = 0
-  }
-
+function scrollShips(t: number): void {
   for (const item of rendered) {
-    if (item.isShip) setGridScroll(item, Math.min(t, 1))
+    if (item.isShip) setGridScroll(item, t)
   }
+}
 
+function advanceGallery(now: number): void {
+  scrollShips(Math.min(generationProgress(now), 1))
+}
+
+function tick(now: number): void {
+  if (running) advanceGallery(now)
   requestAnimationFrame(tick)
 }
 
