@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conway's Game of Life</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="./src/boot.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    }
+  </style>
+  <style>
+    /* Hide until URL params are applied and the first frame is painted. */
+    html.boot-pending body { visibility: hidden; }
+  </style>
+</head>
+<body class="min-h-screen font-sans antialiased text-zinc-900 bg-zinc-100 dark:text-zinc-100 dark:bg-zinc-950 grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_280px] lg:grid-rows-[auto_minmax(0,1fr)_auto]">
+  <header class="col-span-full order-1 flex items-center justify-between gap-4 px-5 py-3.5 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
+    <h1 class="m-0 text-lg font-bold tracking-tight">Conway's Game of Life</h1>
+    <nav class="flex gap-3.5 text-sm">
+      <a class="text-blue-600 dark:text-blue-400 underline-offset-2 hover:no-underline underline decoration-1" href="./about.html">About &amp; patterns</a>
+    </nav>
+  </header>
+
+  <aside class="order-3 lg:order-none lg:row-start-2 lg:col-start-1 p-4 bg-white dark:bg-zinc-900 border-t lg:border-t-0 lg:border-r border-zinc-200 dark:border-zinc-800 overflow-auto" aria-label="Settings">
+    <h2 class="m-0 mb-3.5 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Settings</h2>
+    <form id="settings" class="grid gap-4">
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        Seed
+        <span class="grid grid-cols-[1fr_auto] gap-1.5">
+          <input id="seed" name="seed" type="text" spellcheck="false" autocomplete="off" placeholder="UUID or number"
+            class="min-w-0 w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 text-xs text-zinc-900 dark:text-zinc-100">
+          <button id="seed-random" type="button" title="New random seed"
+            class="appearance-none rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:border-blue-500 disabled:opacity-45 disabled:cursor-not-allowed">↻</button>
+        </span>
+      </label>
+
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        <span class="flex items-baseline justify-between gap-2">
+          <span>Zoom</span>
+          <output id="zoom-label" for="zoom" class="tabular-nums text-sm text-zinc-900 dark:text-zinc-100">12px</output>
+        </span>
+        <input id="zoom" name="zoom" type="range" min="2" max="48" step="1" value="12" class="w-full">
+      </label>
+
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        Foreground
+        <input id="fg" name="fg" type="color" value="#111111"
+          class="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-0.5">
+      </label>
+
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        Background
+        <input id="bg" name="bg" type="color" value="#ffffff"
+          class="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-0.5">
+      </label>
+
+      <label class="flex items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer">
+        <input id="grid" name="grid" type="checkbox" checked class="size-4 accent-blue-600">
+        Show grid
+      </label>
+
+      <hr class="border-0 border-t border-zinc-200 dark:border-zinc-800 my-1">
+
+      <h2 class="m-0 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Spawn</h2>
+
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        Pattern
+        <select id="spawn" name="spawn"
+          class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 text-zinc-900 dark:text-zinc-100"></select>
+      </label>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+          X
+          <input id="spawn-x" name="x" type="number" step="1" value="0"
+            class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 tabular-nums text-zinc-900 dark:text-zinc-100">
+        </label>
+        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+          Y
+          <input id="spawn-y" name="y" type="number" step="1" value="0"
+            class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 tabular-nums text-zinc-900 dark:text-zinc-100">
+        </label>
+      </div>
+
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        Orientation
+        <select id="spawn-rot" name="rot"
+          class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 text-zinc-900 dark:text-zinc-100">
+          <option value="0">0°</option>
+          <option value="90">90°</option>
+          <option value="180">180°</option>
+          <option value="270">270°</option>
+        </select>
+      </label>
+
+      <button id="spawn-btn" type="button"
+        class="w-full appearance-none rounded-lg border border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400 dark:text-zinc-950 px-3 py-1.5 text-sm cursor-pointer hover:opacity-90 disabled:opacity-45 disabled:cursor-not-allowed">
+        Spawn
+      </button>
+    </form>
+  </aside>
+
+  <main class="order-2 lg:order-none lg:row-start-2 lg:col-start-2 min-h-[55vh] lg:min-h-0 min-w-0 grid p-3 bg-[radial-gradient(1200px_500px_at_50%_0%,rgba(37,99,235,0.12),transparent_60%),#f4f4f5] dark:bg-[radial-gradient(1200px_500px_at_50%_0%,rgba(121,184,255,0.10),transparent_60%),#09090b]" aria-label="Simulation">
+    <canvas id="life" width="800" height="600"
+      class="block w-full h-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-black shadow-sm"></canvas>
+  </main>
+
+  <aside class="order-4 lg:order-none lg:row-start-2 lg:col-start-3 p-4 bg-white dark:bg-zinc-900 border-t lg:border-t-0 lg:border-l border-zinc-200 dark:border-zinc-800 overflow-auto" aria-label="About the rules">
+    <h2 class="m-0 mb-3.5 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Rules</h2>
+
+    <h3 class="mt-0 mb-1.5 text-[0.95rem] font-semibold">What is this?</h3>
+    <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+      Conway's Game of Life is a cellular automaton on an infinite grid.
+      Each cell is either alive or dead. Time advances in discrete generations.
+    </p>
+
+    <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">B3/S23</h3>
+    <ul class="m-0 mb-3 pl-5 list-disc text-sm text-zinc-500 dark:text-zinc-400 space-y-1.5">
+      <li><strong class="text-zinc-900 dark:text-zinc-100">Birth:</strong> a dead cell with exactly <code class="text-[0.84em] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">3</code> live neighbors becomes alive.</li>
+      <li><strong class="text-zinc-900 dark:text-zinc-100">Survival:</strong> a live cell with <code class="text-[0.84em] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">2</code> or <code class="text-[0.84em] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">3</code> live neighbors stays alive.</li>
+      <li><strong class="text-zinc-900 dark:text-zinc-100">Death:</strong> otherwise the cell dies or stays dead (under/overpopulation).</li>
+    </ul>
+
+    <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">Pattern types</h3>
+    <ul class="m-0 mb-3 pl-5 list-disc text-sm text-zinc-500 dark:text-zinc-400 space-y-1.5">
+      <li><strong class="text-zinc-900 dark:text-zinc-100">Still lifes</strong> — stable shapes that never change.</li>
+      <li><strong class="text-zinc-900 dark:text-zinc-100">Oscillators</strong> — cycle through a fixed period.</li>
+      <li><strong class="text-zinc-900 dark:text-zinc-100">Spaceships</strong> — translate across the grid over time.</li>
+    </ul>
+
+    <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">Controls</h3>
+    <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+      <strong class="text-zinc-900 dark:text-zinc-100">Seed</strong> drives a deterministic random soup. The same seed always produces the same starting cells.
+      <strong class="text-zinc-900 dark:text-zinc-100">Spawn</strong> stamps a named pattern at an (x, y) cell with optional rotation.
+      Click the board to set the spawn coordinates.
+    </p>
+    <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+      Use the footer to play, step, or reset. Settings are stored in the URL.
+    </p>
+  </aside>
+
+  <footer class="col-span-full order-5 lg:order-none lg:row-start-3 grid grid-cols-1 md:grid-cols-3 items-center gap-3 px-4 py-2.5 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
+    <div class="flex items-center justify-center md:justify-start">
+      <label for="speed" class="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+        Speed
+        <input id="speed" type="range" min="5" max="1000" step="1" value="40" class="w-[140px]">
+        <span id="speed-label">40 ms</span>
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-center gap-2.5">
+      <button id="play" type="button" aria-pressed="false"
+        class="appearance-none rounded-lg border border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400 dark:text-zinc-950 px-3 py-1.5 text-sm cursor-pointer hover:opacity-90 disabled:opacity-45 disabled:cursor-not-allowed">
+        Play
+      </button>
+      <button id="reset" type="button" title="Reset to seed"
+        class="appearance-none rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:border-blue-500 disabled:opacity-45 disabled:cursor-not-allowed">
+        Reset
+      </button>
+      <div class="mx-1 h-6 w-px bg-zinc-300 dark:bg-zinc-700" aria-hidden="true"></div>
+      <button id="prev" type="button" title="Previous generation"
+        class="appearance-none rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:border-blue-500 disabled:opacity-45 disabled:cursor-not-allowed">
+        Prev
+      </button>
+      <button id="next" type="button" title="Next generation"
+        class="appearance-none rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:border-blue-500 disabled:opacity-45 disabled:cursor-not-allowed">
+        Next
+      </button>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-center md:justify-end gap-x-5 gap-y-2 text-sm text-zinc-500 dark:text-zinc-400 tabular-nums" aria-live="polite">
+      <span>Gen <strong id="status-gen" class="font-semibold text-zinc-900 dark:text-zinc-100">0</strong></span>
+      <span>Pop <strong id="status-pop" class="font-semibold text-zinc-900 dark:text-zinc-100">0</strong></span>
+      <span>Cursor <strong id="status-cursor" class="font-semibold text-zinc-900 dark:text-zinc-100">—</strong></span>
+      <span>State <strong id="status-state" class="font-semibold text-zinc-900 dark:text-zinc-100">paused</strong></span>
+    </div>
+  </footer>
+
+  <script type="module" src="./src/simulator.js"></script>
+</body>
+</html>

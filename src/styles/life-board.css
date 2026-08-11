@@ -1,0 +1,49 @@
+/* Dynamic Life boards (about gallery) — sizes come from --cols/--rows/--cell-size. */
+.life-board {
+  --cell-size: 10px;
+  --grid-line: #c8c8c8;
+  width: calc(var(--cols) * var(--cell-size));
+  height: calc(var(--rows) * var(--cell-size));
+  overflow: hidden;
+  background-color: #fff;
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: var(--cell-size) var(--cell-size);
+}
+
+@media (prefers-color-scheme: dark) {
+  .life-board {
+    --grid-line: #3a4048;
+    background-color: #121212;
+  }
+}
+
+.life-board-inner {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell-size));
+  grid-template-rows: repeat(var(--rows), var(--cell-size));
+  width: fit-content;
+}
+
+.life-cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  background: transparent;
+}
+
+.life-cell.is-alive {
+  background: #111;
+}
+
+@media (prefers-color-scheme: dark) {
+  .life-cell.is-alive {
+    background: #e8e8e8;
+  }
+}
+
+@media (max-width: 560px) {
+  .life-board {
+    --cell-size: 8px;
+  }
+}
