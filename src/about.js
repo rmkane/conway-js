@@ -1,9 +1,13 @@
 import { LIFE_PATTERNS } from "./life-data.js";
 
 const gallery = document.querySelector("#gallery");
+const simLink = document.querySelector("#sim-link");
 const speedInput = document.querySelector("#speed");
 const speedLabel = document.querySelector("#speed-label");
 const toggleButton = document.querySelector("#toggle");
+
+// Keep simulator settings (including colors) when navigating back.
+if (simLink) simLink.href = `./index.html${location.search}`;
 
 let running = true;
 let generationDuration = Number(speedInput.value);

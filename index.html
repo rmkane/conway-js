@@ -23,7 +23,7 @@
   <header class="col-span-full order-1 flex items-center justify-between gap-4 px-5 py-3.5 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
     <h1 class="m-0 text-lg font-bold tracking-tight">Conway's Game of Life</h1>
     <nav class="flex gap-3.5 text-sm">
-      <a class="text-blue-600 dark:text-blue-400 underline-offset-2 hover:no-underline underline decoration-1" href="./about.html">About &amp; patterns</a>
+      <a id="about-link" class="text-blue-600 dark:text-blue-400 underline-offset-2 hover:no-underline underline decoration-1" href="./about.html">About &amp; patterns</a>
     </nav>
   </header>
 
@@ -48,21 +48,31 @@
         <input id="zoom" name="zoom" type="range" min="2" max="48" step="1" value="12" class="w-full">
       </label>
 
-      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-        Foreground
-        <input id="fg" name="fg" type="color" value="#111111"
-          class="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-0.5">
-      </label>
-
-      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-        Background
-        <input id="bg" name="bg" type="color" value="#ffffff"
-          class="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-0.5">
-      </label>
+      <div class="grid grid-cols-2 gap-2.5">
+        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+          Foreground
+          <input id="fg" name="fg" type="color" value="#111111"
+            class="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-0.5">
+        </label>
+        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+          Background
+          <input id="bg" name="bg" type="color" value="#ffffff"
+            class="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-0.5">
+        </label>
+      </div>
 
       <label class="flex items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer">
         <input id="grid" name="grid" type="checkbox" checked class="size-4 accent-blue-600">
         Show grid
+      </label>
+
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        Mode
+        <select id="mode" name="mode"
+          class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 text-zinc-900 dark:text-zinc-100">
+          <option value="spawn">Spawn</option>
+          <option value="inspect">Inspect</option>
+        </select>
       </label>
 
       <hr class="border-0 border-t border-zinc-200 dark:border-zinc-800 my-1">
@@ -75,19 +85,6 @@
           class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 text-zinc-900 dark:text-zinc-100"></select>
       </label>
 
-      <div class="grid grid-cols-2 gap-2.5">
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          X
-          <input id="spawn-x" name="x" type="number" step="1" value="0"
-            class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 tabular-nums text-zinc-900 dark:text-zinc-100">
-        </label>
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          Y
-          <input id="spawn-y" name="y" type="number" step="1" value="0"
-            class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 tabular-nums text-zinc-900 dark:text-zinc-100">
-        </label>
-      </div>
-
       <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
         Orientation
         <select id="spawn-rot" name="rot"
@@ -99,10 +96,26 @@
         </select>
       </label>
 
-      <button id="spawn-btn" type="button"
-        class="w-full appearance-none rounded-lg border border-blue-600 bg-blue-600 text-white dark:border-blue-400 dark:bg-blue-400 dark:text-zinc-950 px-3 py-1.5 text-sm cursor-pointer hover:opacity-90 disabled:opacity-45 disabled:cursor-not-allowed">
-        Spawn
-      </button>
+      <div class="grid grid-cols-2 gap-2.5">
+        <label class="flex items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer">
+          <input id="spawn-flip-x" name="flipX" type="checkbox" class="size-4 accent-blue-600">
+          Flip X
+        </label>
+        <label class="flex items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer">
+          <input id="spawn-flip-y" name="flipY" type="checkbox" class="size-4 accent-blue-600">
+          Flip Y
+        </label>
+      </div>
+
+      <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        Cursor anchor
+        <select id="spawn-anchor" name="anchor"
+          class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-2 text-zinc-900 dark:text-zinc-100">
+          <option value="center">Center</option>
+          <option value="corner">Top-left</option>
+        </select>
+      </label>
+
     </form>
   </aside>
 
@@ -137,8 +150,10 @@
     <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">Controls</h3>
     <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
       <strong class="text-zinc-900 dark:text-zinc-100">Seed</strong> drives a deterministic random soup. The same seed always produces the same starting cells.
-      <strong class="text-zinc-900 dark:text-zinc-100">Spawn</strong> stamps a named pattern at an (x, y) cell with optional rotation.
-      Click the board to set the spawn coordinates.
+      <strong class="text-zinc-900 dark:text-zinc-100">Mode</strong> switches board interaction:
+      <strong class="text-zinc-900 dark:text-zinc-100">Spawn</strong> shows a pattern ghost and places on click;
+      <strong class="text-zinc-900 dark:text-zinc-100">Inspect</strong> highlights the cell under the cursor.
+      <strong class="text-zinc-900 dark:text-zinc-100">Cursor anchor</strong> chooses center vs top-left for spawn placement.
     </p>
     <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
       Use the footer to play, step, or reset. Settings are stored in the URL.

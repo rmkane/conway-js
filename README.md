@@ -30,11 +30,13 @@ src/
 |-------|---------|
 | `seed` | PRNG seed (UUID or number) for the random starting soup |
 | `zoom` | Cell size in pixels |
-| `fg`   | Alive cell color (`#rrggbb`) |
-| `bg`   | Background color (`#rrggbb`) |
+| `fg`   | Alive cell color (`rrggbb`, no `#`) |
+| `bg`   | Background color (`rrggbb`, no `#`) |
 | `grid` | Show cell grid (`1` / `0`) |
-| `spawn`| Pattern id for the spawn form (`glider`, …) |
-| `x`/`y`| Spawn position (cell coords, top-left of pattern) |
+| `mode` | Board interaction: `spawn` or `inspect` |
+| `spawn`| Pattern id for spawn mode (`glider`, …) |
 | `rot`  | Spawn orientation: `0`, `90`, `180`, or `270` |
+| `anchor` | Cursor anchor: `center` or `corner` |
+| `flipX` / `flipY` | Mirror spawn pattern (`1` / `0`) |
 
 Refreshing always restores generation 0 from the PRNG `seed` (spawns are not replayed).

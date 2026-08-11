@@ -147,6 +147,12 @@ export class Conway {
     this.originX = 0;
     this.originY = 0;
     this.hoverCell = null;
+    /** @type {Array<[number, number]> | null} offsets from top-left for spawn ghost */
+    this.ghostTemplate = null;
+    /** @type {"center" | "corner"} */
+    this.ghostAnchor = "center";
+    /** @type {"inspect" | "spawn"} */
+    this.mode = "spawn";
 
     this._renderQueued = false;
     this._onChange = null;
@@ -223,26 +229,111 @@ export class Conway {
   }
 
   /**
-   * Stamp a pattern onto the board at (x, y) with rotation.
-   * (x, y) is the top-left of the pattern's bounding box after rotation.
+   * Relative cell offsets for a pattern (top-left of bbox at 0,0).
+   * Applies rotation, then optional X/Y flips within the bbox.
    * @param {string[]} rows
-   * @param {number} x
-   * @param {number} y
-   * @param {0|90|180|270} [rotation]
+   * @param {{ rotation?: 0|90|180|270, flipX?: boolean, flipY?: boolean }} [options]
+   * @returns {Array<[number, number]>}
    */
-  spawn(rows, x, y, rotation = 0) {
-    let cells = parseSeedRows(rows);
-    cells = rotateAlive(cells, rotation);
+  static patternOffsets(rows, options = {}) {
+    const rotation = options.rotation ?? 0;
+    const flipX = Boolean(options.flipX);
+    const flipY = Boolean(options.flipY);
 
-    if (!cells.size) return;
+    let cells = rotateAlive(parseSeedRows(rows), rotation);
+    if (!cells.size) return [];
+
+    if (flipX || flipY) {
+      const { minX, minY, maxX, maxY } = bbox(cells);
+      const flipped = new Set();
+      for (const key of cells) {
+        let [x, y] = unpack(key);
+        if (flipX) x = maxX + minX - x;
+        if (flipY) y = maxY + minY - y;
+        flipped.add(pack(x, y));
+      }
+      cells = flipped;
+    }
 
     const { minX, minY } = bbox(cells);
-    const dx = Math.round(x) - minX;
-    const dy = Math.round(y) - minY;
-
+    const offsets = [];
     for (const key of cells) {
       const [cx, cy] = unpack(key);
-      this.alive.add(pack(cx + dx, cy + dy));
+      offsets.push([cx - minX, cy - minY]);
+    }
+    return offsets;
+  }
+
+  /**
+   * Convert an anchor cell (cursor / X,Y) into the pattern's top-left origin.
+   * @param {number} anchorX
+   * @param {number} anchorY
+   * @param {Array<[number, number]>} offsets
+   * @param {"center" | "corner"} [anchor]
+   */
+  static anchorToOrigin(anchorX, anchorY, offsets, anchor = "corner") {
+    if (!offsets.length || anchor === "corner") {
+      return { x: Math.round(anchorX), y: Math.round(anchorY) };
+    }
+
+    let maxDx = 0;
+    let maxDy = 0;
+    for (const [dx, dy] of offsets) {
+      maxDx = Math.max(maxDx, dx);
+      maxDy = Math.max(maxDy, dy);
+    }
+
+    return {
+      x: Math.round(anchorX) - Math.floor(maxDx / 2),
+      y: Math.round(anchorY) - Math.floor(maxDy / 2)
+    };
+  }
+
+  /**
+   * Set the translucent spawn preview shape (follows the hover cell).
+   * @param {string[] | null} rows
+   * @param {{ rotation?: 0|90|180|270, flipX?: boolean, flipY?: boolean }} [options]
+   */
+  setGhostPattern(rows, options = {}) {
+    if (!rows) {
+      this.ghostTemplate = null;
+      this.scheduleRender();
+      return;
+    }
+    const offsets = Conway.patternOffsets(rows, options);
+    this.ghostTemplate = offsets.length ? offsets : null;
+    this.scheduleRender();
+  }
+
+  /**
+   * @param {"center" | "corner"} anchor
+   */
+  setGhostAnchor(anchor) {
+    this.ghostAnchor = anchor === "corner" ? "corner" : "center";
+    this.scheduleRender();
+  }
+
+  /**
+   * @param {"inspect" | "spawn"} mode
+   */
+  setMode(mode) {
+    this.mode = mode === "inspect" ? "inspect" : "spawn";
+    this.scheduleRender();
+  }
+
+  /**
+   * @param {string[]} rows
+   * @param {number} x anchor cell
+   * @param {number} y anchor cell
+   * @param {{ rotation?: 0|90|180|270, anchor?: "center"|"corner", flipX?: boolean, flipY?: boolean }} [options]
+   */
+  spawn(rows, x, y, options = {}) {
+    const offsets = Conway.patternOffsets(rows, options);
+    if (!offsets.length) return;
+
+    const origin = Conway.anchorToOrigin(x, y, offsets, options.anchor ?? "corner");
+    for (const [dx, dy] of offsets) {
+      this.alive.add(pack(origin.x + dx, origin.y + dy));
     }
 
     this.scheduleRender();
@@ -373,7 +464,42 @@ export class Conway {
       ctx.fillRect(sx, sy, cellSize, cellSize);
     }
 
-    if (this.hoverCell) {
+    // Spawn mode: pattern ghost. Inspect mode: single-cell highlight.
+    if (this.mode === "spawn" && this.hoverCell && this.ghostTemplate?.length) {
+      const origin = Conway.anchorToOrigin(
+        this.hoverCell.x,
+        this.hoverCell.y,
+        this.ghostTemplate,
+        this.ghostAnchor
+      );
+      let minDx = Infinity;
+      let minDy = Infinity;
+      let maxDx = -Infinity;
+      let maxDy = -Infinity;
+
+      ctx.fillStyle = "rgba(59, 130, 246, 0.38)";
+      ctx.strokeStyle = "rgba(37, 99, 235, 0.55)";
+      ctx.lineWidth = 1;
+      for (const [dx, dy] of this.ghostTemplate) {
+        minDx = Math.min(minDx, dx);
+        minDy = Math.min(minDy, dy);
+        maxDx = Math.max(maxDx, dx);
+        maxDy = Math.max(maxDy, dy);
+        const sx = (origin.x + dx - ox) * cellSize;
+        const sy = (origin.y + dy - oy) * cellSize;
+        if (sx + cellSize < 0 || sy + cellSize < 0 || sx > cssW || sy > cssH) continue;
+        ctx.fillRect(sx, sy, cellSize, cellSize);
+        ctx.strokeRect(sx + 0.5, sy + 0.5, cellSize - 1, cellSize - 1);
+      }
+
+      const boxX = (origin.x + minDx - ox) * cellSize;
+      const boxY = (origin.y + minDy - oy) * cellSize;
+      const boxW = (maxDx - minDx + 1) * cellSize;
+      const boxH = (maxDy - minDy + 1) * cellSize;
+      ctx.strokeStyle = "rgba(37, 99, 235, 0.95)";
+      ctx.lineWidth = Math.max(2, Math.min(3, cellSize / 4));
+      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1);
+    } else if (this.hoverCell) {
       const hx = (this.hoverCell.x - ox) * cellSize;
       const hy = (this.hoverCell.y - oy) * cellSize;
       if (hx + cellSize >= 0 && hy + cellSize >= 0 && hx <= cssW && hy <= cssH) {
