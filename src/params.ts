@@ -1,6 +1,4 @@
-export type InteractionMode = 'inspect' | 'spawn'
-export type AnchorMode = 'center' | 'corner'
-export type Rotation = 0 | 90 | 180 | 270
+import type { AnchorMode, InteractionMode, Rotation } from '@/types.ts'
 
 export interface LifeParams {
   seed: string
@@ -16,7 +14,7 @@ export interface LifeParams {
   flipY: boolean
 }
 
-export const DEFAULTS = {
+const DEFAULTS = {
   zoom: 12,
   grid: true,
   mode: 'spawn' as InteractionMode,
@@ -62,7 +60,7 @@ export function decodeColor(
   return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex.toLowerCase() : fallback
 }
 
-export function systemColors(): { fg: string; bg: string } {
+function systemColors(): { fg: string; bg: string } {
   const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
   return dark
     ? { fg: '#e8e8e8', bg: '#121212' }
@@ -85,7 +83,7 @@ export function parseRotation(value: number): Rotation {
     : DEFAULTS.rot
 }
 
-export function parseParams(validSpawn: (id: string) => boolean): LifeParams {
+function parseParams(validSpawn: (id: string) => boolean): LifeParams {
   if (window.__LIFE_BOOT__) {
     const boot = window.__LIFE_BOOT__
     const sys = systemColors()

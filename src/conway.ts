@@ -1,12 +1,23 @@
-const HISTORY_LIMIT = 1000
+import {
+  type AliveSet,
+  bbox,
+  cloneAlive,
+  pack,
+  stepAlive,
+  unpack,
+} from '@/life.ts'
+import { anchorToOrigin, patternOffsets } from '@/pattern.ts'
+import { randomSoup } from '@/rng.ts'
+import type {
+  AnchorMode,
+  CellCoord,
+  InteractionMode,
+  Offset,
+  PatternTransform,
+  SpawnOptions,
+} from '@/types.ts'
 
-export type CellKey = string
-export type AliveSet = Set<CellKey>
-export type CellCoord = { x: number; y: number }
-export type Offset = [number, number]
-export type Rotation = 0 | 90 | 180 | 270
-export type AnchorMode = 'center' | 'corner'
-export type InteractionMode = 'inspect' | 'spawn'
+const HISTORY_LIMIT = 1000
 
 export interface ConwayOptions {
   cellSize?: number
@@ -15,141 +26,11 @@ export interface ConwayOptions {
   showGrid?: boolean
 }
 
-export interface PatternTransform {
-  rotation?: Rotation
-  flipX?: boolean
-  flipY?: boolean
-}
-
-export interface SpawnOptions extends PatternTransform {
-  anchor?: AnchorMode
-}
-
 export interface RandomSeedOptions {
   width?: number
   height?: number
   density?: number
   render?: boolean
-}
-
-function pack(x: number, y: number): CellKey {
-  return `${x},${y}`
-}
-
-function unpack(key: CellKey): [number, number] {
-  const i = key.indexOf(',')
-  return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
-}
-
-function parseSeedRows(rows: string[]): AliveSet {
-  const alive: AliveSet = new Set()
-  for (let y = 0; y < rows.length; y++) {
-    for (let x = 0; x < rows[y].length; x++) {
-      if (rows[y][x] === '#') alive.add(pack(x, y))
-    }
-  }
-  return alive
-}
-
-function cloneAlive(alive: AliveSet): AliveSet {
-  return new Set(alive)
-}
-
-function stepAlive(alive: AliveSet): AliveSet {
-  const counts = new Map<CellKey, number>()
-  for (const key of alive) {
-    const [x, y] = unpack(key)
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dy === 0) continue
-        const k = pack(x + dx, y + dy)
-        counts.set(k, (counts.get(k) || 0) + 1)
-      }
-    }
-  }
-
-  const next: AliveSet = new Set()
-  for (const [key, n] of counts) {
-    if (n === 3 || (n === 2 && alive.has(key))) next.add(key)
-  }
-  return next
-}
-
-function bbox(alive: AliveSet): {
-  minX: number
-  minY: number
-  maxX: number
-  maxY: number
-} {
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const key of alive) {
-    const [x, y] = unpack(key)
-    minX = Math.min(minX, x)
-    minY = Math.min(minY, y)
-    maxX = Math.max(maxX, x)
-    maxY = Math.max(maxY, y)
-  }
-  if (!alive.size) return { minX: 0, minY: 0, maxX: 0, maxY: 0 }
-  return { minX, minY, maxX, maxY }
-}
-
-/** FNV-1a → 32-bit seed for the PRNG. */
-export function hashSeed(value: string | number): number {
-  const str = String(value)
-  let h = 2166136261
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-
-export function mulberry32(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-/** Rotate live cells by 0/90/180/270° clockwise around the pattern's top-left bbox. */
-export function rotateAlive(alive: AliveSet, degrees: number): AliveSet {
-  const rot = ((degrees % 360) + 360) % 360
-  if (!alive.size || rot === 0) return cloneAlive(alive)
-
-  const { minX, minY, maxX, maxY } = bbox(alive)
-  const w = maxX - minX + 1
-  const h = maxY - minY + 1
-  const next: AliveSet = new Set()
-
-  for (const key of alive) {
-    const [gx, gy] = unpack(key)
-    const x = gx - minX
-    const y = gy - minY
-    let nx: number
-    let ny: number
-    if (rot === 90) {
-      nx = h - 1 - y
-      ny = x
-    } else if (rot === 180) {
-      nx = w - 1 - x
-      ny = h - 1 - y
-    } else if (rot === 270) {
-      nx = y
-      ny = w - 1 - x
-    } else {
-      nx = x
-      ny = y
-    }
-    next.add(pack(minX + nx, minY + ny))
-  }
-
-  return next
 }
 
 /**
@@ -246,83 +127,9 @@ export class Conway {
     seedKey: string | number,
     options: RandomSeedOptions = {},
   ): void {
-    const width = options.width ?? 48
-    const height = options.height ?? 32
-    const density = options.density ?? 0.22
-    const rand = mulberry32(hashSeed(seedKey))
-    const alive: AliveSet = new Set()
-    const ox = -Math.floor(width / 2)
-    const oy = -Math.floor(height / 2)
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (rand() < density) alive.add(pack(ox + x, oy + y))
-      }
-    }
-
     this.seedKey = String(seedKey)
-    this.seedAlive = alive
+    this.seedAlive = randomSoup(seedKey, options)
     this.resetToSeed({ render: options.render !== false })
-  }
-
-  /**
-   * Relative cell offsets for a pattern (top-left of bbox at 0,0).
-   * Applies rotation, then optional X/Y flips within the bbox.
-   */
-  static patternOffsets(
-    rows: string[],
-    options: PatternTransform = {},
-  ): Offset[] {
-    const rotation = options.rotation ?? 0
-    const flipX = Boolean(options.flipX)
-    const flipY = Boolean(options.flipY)
-
-    let cells = rotateAlive(parseSeedRows(rows), rotation)
-    if (!cells.size) return []
-
-    if (flipX || flipY) {
-      const { minX, minY, maxX, maxY } = bbox(cells)
-      const flipped: AliveSet = new Set()
-      for (const key of cells) {
-        let [x, y] = unpack(key)
-        if (flipX) x = maxX + minX - x
-        if (flipY) y = maxY + minY - y
-        flipped.add(pack(x, y))
-      }
-      cells = flipped
-    }
-
-    const { minX, minY } = bbox(cells)
-    const offsets: Offset[] = []
-    for (const key of cells) {
-      const [cx, cy] = unpack(key)
-      offsets.push([cx - minX, cy - minY])
-    }
-    return offsets
-  }
-
-  /** Convert an anchor cell (cursor / X,Y) into the pattern's top-left origin. */
-  static anchorToOrigin(
-    anchorX: number,
-    anchorY: number,
-    offsets: Offset[],
-    anchor: AnchorMode = 'corner',
-  ): CellCoord {
-    if (!offsets.length || anchor === 'corner') {
-      return { x: Math.round(anchorX), y: Math.round(anchorY) }
-    }
-
-    let maxDx = 0
-    let maxDy = 0
-    for (const [dx, dy] of offsets) {
-      maxDx = Math.max(maxDx, dx)
-      maxDy = Math.max(maxDy, dy)
-    }
-
-    return {
-      x: Math.round(anchorX) - Math.floor(maxDx / 2),
-      y: Math.round(anchorY) - Math.floor(maxDy / 2),
-    }
   }
 
   /** Set the translucent spawn preview shape (follows the hover cell). */
@@ -332,7 +139,7 @@ export class Conway {
       this.scheduleRender()
       return
     }
-    const offsets = Conway.patternOffsets(rows, options)
+    const offsets = patternOffsets(rows, options)
     this.ghostTemplate = offsets.length ? offsets : null
     this.scheduleRender()
   }
@@ -353,15 +160,10 @@ export class Conway {
     y: number,
     options: SpawnOptions = {},
   ): void {
-    const offsets = Conway.patternOffsets(rows, options)
+    const offsets = patternOffsets(rows, options)
     if (!offsets.length) return
 
-    const origin = Conway.anchorToOrigin(
-      x,
-      y,
-      offsets,
-      options.anchor ?? 'corner',
-    )
+    const origin = anchorToOrigin(x, y, offsets, options.anchor ?? 'corner')
     for (const [dx, dy] of offsets) {
       this.alive.add(pack(origin.x + dx, origin.y + dy))
     }
@@ -492,7 +294,7 @@ export class Conway {
 
     // Spawn mode: pattern ghost. Inspect mode: single-cell highlight.
     if (this.mode === 'spawn' && this.hoverCell && this.ghostTemplate?.length) {
-      const origin = Conway.anchorToOrigin(
+      const origin = anchorToOrigin(
         this.hoverCell.x,
         this.hoverCell.y,
         this.ghostTemplate,

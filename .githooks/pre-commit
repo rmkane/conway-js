@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Runs the project quality gate before each commit.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "==> pre-commit: format-check, lint, test, typecheck"
+make precommit

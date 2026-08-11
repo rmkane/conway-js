@@ -1,10 +1,12 @@
 # Conway's Game of Life
 
-Browser app with a full simulator and a pattern gallery. Built with Vite, TypeScript, Tailwind CSS, and the Oxc toolchain (Oxfmt + Oxlint).
+Browser app with a full simulator and a pattern gallery.
+
+Stack: Vite, TypeScript, Tailwind CSS, pnpm, Oxfmt, Oxlint, Vitest, and Fallow.
 
 ```bash
-cd conway
 make install
+make hooks    # once: enable .githooks/pre-commit
 make dev
 ```
 
@@ -12,27 +14,34 @@ make dev
 - Pattern gallery: [http://localhost:5173/about.html](http://localhost:5173/about.html)
 
 ```bash
-make build          # outputs to dist/
-make preview        # serve dist locally
-make format         # Oxfmt
-make lint           # Oxlint
-make test           # Vitest
-make check          # format-check + lint + test + build
-make help           # list targets
+make help       # sectioned list of all targets
+make check      # format-check + lint + typecheck + test + analyze + build
+make precommit  # format-check + lint + test + typecheck (git hook)
 ```
+
+CI (`.github/workflows/ci.yml`) runs the same gate on Node 24 with pnpm.
 
 ## Layout
 
 ```none
-index.html          Simulator shell
-about.html          Pattern gallery
+index.html              Simulator shell
+about.html              Pattern gallery
+Makefile                Dev / quality targets
 src/
-  conway.ts         Conway game class (update / render)
-  params.ts         URL query-param parse / write
-  simulator.ts      Simulator UI binding
-  about.ts          Gallery animations
-  life-data.ts      Pattern shapes
-  styles/main.css   Tailwind entry + gallery board CSS
+  conway.ts             Canvas engine (update / render)
+  pattern.ts            Shape rotate / offsets / spawn anchor
+  rng.ts                PRNG + random soup
+  life.ts               Shared B3/S23 cell helpers
+  life-data.ts          Pattern shapes (`shape`, optional `pad`)
+  types.ts              Shared domain types
+  params.ts             URL query-param parse / write
+  simulator.ts          Simulator UI binding
+  about.ts              Gallery animations
+  dom.ts                Typed DOM helpers
+  styles/main.css       Tailwind entry
+  styles/life-board.css Gallery board CSS
+.githooks/pre-commit    Runs make precommit
+scripts/install-hooks.sh
 ```
 
 ## Simulator query params

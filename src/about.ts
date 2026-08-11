@@ -4,10 +4,15 @@ import {
   type LifePattern,
   type PatternCategory,
 } from '@/life-data.ts'
+import {
+  type AliveSet,
+  homeAlive,
+  pack,
+  parseShapeRows,
+  stepAlive,
+} from '@/life.ts'
 
 import '@/styles/main.css'
-
-type AliveSet = Set<string>
 
 interface GalleryItem {
   card: HTMLElement
@@ -38,28 +43,13 @@ let running = true
 let generationDuration = Number(speedInput.value)
 let generationStartedAt = 0
 
-function pack(x: number, y: number): string {
-  return `${x},${y}`
-}
-
-function unpack(key: string): [number, number] {
-  const i = key.indexOf(',')
-  return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
-}
-
 function parseShape(shape: string[]): {
   alive: AliveSet
   cols: number
   rows: number
 } {
-  const alive: AliveSet = new Set()
-  let cols = 0
-  for (let y = 0; y < shape.length; y++) {
-    cols = Math.max(cols, shape[y].length)
-    for (let x = 0; x < shape[y].length; x++) {
-      if (shape[y][x] === '#') alive.add(pack(x, y))
-    }
-  }
+  const alive = parseShapeRows(shape)
+  const cols = shape.reduce((max, row) => Math.max(max, row.length), 0)
   return { alive, cols, rows: shape.length }
 }
 
@@ -70,65 +60,6 @@ function boardPad(pattern: LifePattern): { x: number; y: number } {
   return { x: n, y: n }
 }
 
-function step(alive: AliveSet): AliveSet {
-  const counts = new Map<string, number>()
-  for (const key of alive) {
-    const [x, y] = unpack(key)
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dy === 0) continue
-        const k = pack(x + dx, y + dy)
-        counts.set(k, (counts.get(k) || 0) + 1)
-      }
-    }
-  }
-  const next: AliveSet = new Set()
-  for (const [key, n] of counts) {
-    if (n === 3 || (n === 2 && alive.has(key))) next.add(key)
-  }
-  return next
-}
-
-function bbox(alive: AliveSet): {
-  minX: number
-  minY: number
-  maxX: number
-  maxY: number
-} {
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const key of alive) {
-    const [x, y] = unpack(key)
-    minX = Math.min(minX, x)
-    minY = Math.min(minY, y)
-    maxX = Math.max(maxX, x)
-    maxY = Math.max(maxY, y)
-  }
-  return { minX, minY, maxX, maxY }
-}
-
-function shiftAlive(alive: AliveSet, dx: number, dy: number): AliveSet {
-  if (dx === 0 && dy === 0) return alive
-  const next: AliveSet = new Set()
-  for (const key of alive) {
-    const [x, y] = unpack(key)
-    next.add(pack(x + dx, y + dy))
-  }
-  return next
-}
-
-function homeAlive(alive: AliveSet, cols: number, rows: number): AliveSet {
-  if (!alive.size) return alive
-  const { minX, minY, maxX, maxY } = bbox(alive)
-  const width = maxX - minX + 1
-  const height = maxY - minY + 1
-  const targetMinX = Math.floor((cols - width) / 2)
-  const targetMinY = Math.floor((rows - height) / 2)
-  return shiftAlive(alive, targetMinX - minX, targetMinY - minY)
-}
-
 function prepareTransition(item: GalleryItem): void {
   if (item.pattern.period === 1) {
     item.pendingAlive = item.alive
@@ -137,7 +68,7 @@ function prepareTransition(item: GalleryItem): void {
     return
   }
 
-  const next = step(item.alive)
+  const next = stepAlive(item.alive)
   if (item.isShip) {
     const velocity = item.pattern.velocity ?? [0, 0]
     const [dx, dy] = velocity
