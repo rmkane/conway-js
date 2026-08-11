@@ -1,48 +1,67 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>About · Conway's Game of Life</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <style type="text/tailwindcss">
-    @theme {
-      --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-    }
-  </style>
-  <link rel="stylesheet" href="./src/styles/life-board.css">
-</head>
-<body class="min-h-screen font-sans antialiased text-zinc-900 bg-zinc-100 dark:text-zinc-100 dark:bg-zinc-950 p-6 max-[560px]:p-4">
-  <header class="flex flex-wrap gap-6 items-end justify-between mb-7">
-    <div>
-      <h1 class="m-0 mb-1.5 text-[1.4rem] font-bold tracking-tight">Pattern gallery</h1>
-      <p class="m-0 text-zinc-500 dark:text-zinc-400 max-w-[52ch]">
-        Classic Life patterns evolved from a seed with B3/S23.
-        Spaceships keep a treadmill grid scroll so travel direction stays clear.
-      </p>
-    </div>
-
-    <nav class="flex flex-wrap gap-3 items-center">
-      <a id="sim-link" class="text-blue-600 dark:text-blue-400 underline-offset-2 hover:no-underline underline decoration-1 text-sm" href="./index.html">Open simulator</a>
-      <div class="flex flex-wrap items-center gap-2.5">
-        <button id="toggle" type="button"
-          class="appearance-none rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer hover:border-blue-500">
-          Pause
-        </button>
-        <label for="speed" class="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-          Frame time
-          <input id="speed" type="range" min="80" max="1200" step="20" value="350" class="w-[140px]">
-          <span id="speed-label"></span>
-        </label>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About · Conway's Game of Life</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    class="min-h-screen bg-zinc-100 p-6 font-sans text-zinc-900 antialiased max-[560px]:p-4 dark:bg-zinc-950 dark:text-zinc-100"
+  >
+    <header class="mb-7 flex flex-wrap items-end justify-between gap-6">
+      <div>
+        <h1 class="m-0 mb-1.5 text-[1.4rem] font-bold tracking-tight">
+          Pattern gallery
+        </h1>
+        <p class="m-0 max-w-[52ch] text-zinc-500 dark:text-zinc-400">
+          Classic Life patterns evolved from a seed with B3/S23. Spaceships keep
+          a treadmill grid scroll so travel direction stays clear.
+        </p>
       </div>
-    </nav>
-  </header>
 
-  <main id="gallery"></main>
+      <nav class="flex flex-wrap items-center gap-3">
+        <a
+          id="sim-link"
+          class="text-sm text-blue-600 underline decoration-1 underline-offset-2 hover:no-underline dark:text-blue-400"
+          href="./index.html"
+          >Open simulator</a
+        >
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            id="toggle"
+            type="button"
+            class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          >
+            Pause
+          </button>
+          <label
+            for="speed"
+            class="flex items-center gap-2 text-sm whitespace-nowrap text-zinc-500 dark:text-zinc-400"
+          >
+            Frame time
+            <input
+              id="speed"
+              type="range"
+              min="80"
+              max="1200"
+              step="20"
+              value="350"
+              class="w-35"
+            />
+            <span id="speed-label"></span>
+          </label>
+        </div>
+      </nav>
+    </header>
 
-  <script type="module" src="./src/about.js"></script>
-</body>
+    <main id="gallery"></main>
+
+    <script type="module" src="/src/about.ts"></script>
+  </body>
 </html>

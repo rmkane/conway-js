@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+@import './life-board.css';
+
+@theme {
+  --font-sans:
+    'IBM Plex Sans', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Hide until URL params are applied and the first frame is painted. */
+html.boot-pending body {
+  visibility: hidden;
+}
