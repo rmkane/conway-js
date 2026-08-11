@@ -39,6 +39,7 @@ const speedLabel = mustGet('#speed-label', HTMLElement)
 const statusGen = mustGet('#status-gen', HTMLElement)
 const statusPop = mustGet('#status-pop', HTMLElement)
 const statusCursor = mustGet('#status-cursor', HTMLElement)
+const statusPattern = mustGet('#status-pattern', HTMLElement)
 const statusState = mustGet('#status-state', HTMLElement)
 
 function readMode(): LifeParams['mode'] {
@@ -161,9 +162,14 @@ function syncPlayUi(running: boolean): void {
   nextBtn.disabled = running
 }
 
+function syncPatternStatus(): void {
+  statusPattern.textContent = game.hoverMatch?.name ?? '—'
+}
+
 function syncStatus(): void {
   statusGen.textContent = String(game.generation)
   statusPop.textContent = String(game.population)
+  syncPatternStatus()
   syncPlayUi(game.running)
 }
 
@@ -262,11 +268,13 @@ canvas.addEventListener('mousemove', (event) => {
   const cell = game.cellAtEvent(event)
   setCursorStatus(cell)
   game.setHoverCell(cell)
+  syncPatternStatus()
 })
 
 canvas.addEventListener('mouseleave', () => {
   setCursorStatus(null)
   game.setHoverCell(null)
+  syncPatternStatus()
 })
 
 canvas.addEventListener('click', (event) => {

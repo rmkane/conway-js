@@ -6,6 +6,7 @@ import {
 } from '@conway/geom'
 
 import { type AliveSet, pack, unpack } from '@/life/cells.ts'
+import type { PatternHit } from '@/life/identify.ts'
 
 type PaintView = {
   cssW: number
@@ -30,6 +31,7 @@ export type PaintScene = {
   alive: AliveSet
   mode: 'inspect' | 'spawn'
   hoverCell: Point | null
+  hoverMatch: PatternHit | null
   ghostTemplate: Offset[] | null
   ghostAnchor: AnchorMode
 }
@@ -42,6 +44,20 @@ function cellOffscreen(
   cssH: number,
 ): boolean {
   return sx + cellSize < 0 || sy + cellSize < 0 || sx > cssW || sy > cssH
+}
+
+function paintCellRect(
+  ctx: CanvasRenderingContext2D,
+  view: PaintView,
+  worldX: number,
+  worldY: number,
+): void {
+  const { cssW, cssH, cellSize, ox, oy } = view
+  const sx = (worldX - ox) * cellSize
+  const sy = (worldY - oy) * cellSize
+  if (cellOffscreen(sx, sy, cellSize, cssW, cssH)) return
+  ctx.fillRect(sx, sy, cellSize, cellSize)
+  ctx.strokeRect(sx + 0.5, sy + 0.5, cellSize - 1, cellSize - 1)
 }
 
 function gridColor(background: string): string {
@@ -127,7 +143,7 @@ function paintGhost(
   offsets: Offset[],
 ): void {
   const { ctx } = scene
-  const { cssW, cssH, cellSize, ox, oy } = view
+  const { cellSize, ox, oy } = view
   const origin = anchorToOrigin(hover.x, hover.y, offsets, scene.ghostAnchor)
   let minDx = Infinity
   let minDy = Infinity
@@ -142,11 +158,7 @@ function paintGhost(
     minDy = Math.min(minDy, dy)
     maxDx = Math.max(maxDx, dx)
     maxDy = Math.max(maxDy, dy)
-    const sx = (origin.x + dx - ox) * cellSize
-    const sy = (origin.y + dy - oy) * cellSize
-    if (cellOffscreen(sx, sy, cellSize, cssW, cssH)) continue
-    ctx.fillRect(sx, sy, cellSize, cellSize)
-    ctx.strokeRect(sx + 0.5, sy + 0.5, cellSize - 1, cellSize - 1)
+    paintCellRect(ctx, view, origin.x + dx, origin.y + dy)
   }
 
   const boxX = (origin.x + minDx - ox) * cellSize
@@ -177,6 +189,14 @@ function paintHover(scene: PaintScene, view: PaintView, hover: Point): void {
   ctx.strokeRect(hx + 0.5, hy + 0.5, cellSize - 1, cellSize - 1)
 }
 
+function paintMatch(scene: PaintScene, view: PaintView, hit: PatternHit): void {
+  const { ctx } = scene
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.28)'
+  ctx.strokeStyle = 'rgba(22, 163, 74, 0.95)'
+  ctx.lineWidth = Math.max(1.5, Math.min(2.5, view.cellSize / 5))
+  for (const cell of hit.cells) paintCellRect(ctx, view, cell.x, cell.y)
+}
+
 function paintOverlay(scene: PaintScene, view: PaintView): void {
   if (
     scene.mode === 'spawn' &&
@@ -184,6 +204,10 @@ function paintOverlay(scene: PaintScene, view: PaintView): void {
     scene.ghostTemplate?.length
   ) {
     paintGhost(scene, view, scene.hoverCell, scene.ghostTemplate)
+    return
+  }
+  if (scene.hoverMatch) {
+    paintMatch(scene, view, scene.hoverMatch)
     return
   }
   if (scene.hoverCell) paintHover(scene, view, scene.hoverCell)

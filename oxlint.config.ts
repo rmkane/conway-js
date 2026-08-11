@@ -20,6 +20,7 @@ export default defineConfig({
           '_centerOnAlive',
           '_emit',
           '_onChange',
+          '_refreshHoverMatch',
           '_renderQueued',
         ],
       },

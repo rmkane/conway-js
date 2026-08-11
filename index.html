@@ -1,25 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="boot-pending">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Conway's Game of Life</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Hide before Vite CSS loads so icons/layout don't FOUC. -->
+    <style>
+      html.boot-pending body {
+        visibility: hidden;
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <script>
-      document.documentElement.classList.add('boot-pending')
-    </script>
   </head>
   <body
-    class="grid min-h-screen grid-cols-1 bg-zinc-100 font-sans text-zinc-900 antialiased lg:grid-cols-[260px_minmax(0,1fr)_280px] lg:grid-rows-[auto_minmax(0,1fr)_auto] dark:bg-zinc-950 dark:text-zinc-100"
+    class="flex min-h-dvh flex-col bg-zinc-100 font-sans text-zinc-900 antialiased lg:h-dvh lg:overflow-hidden dark:bg-zinc-950 dark:text-zinc-100"
   >
     <header
-      class="order-1 col-span-full flex items-center justify-between gap-4 border-b border-zinc-200 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+      class="flex shrink-0 items-center justify-between gap-4 border-b border-zinc-200 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
     >
       <h1 class="m-0 text-lg font-bold tracking-tight">
         Conway's Game of Life
@@ -41,6 +44,8 @@
         >
           <svg
             class="size-4 shrink-0 fill-current"
+            width="16"
+            height="16"
             viewBox="0 0 16 16"
             aria-hidden="true"
             focusable="false"
@@ -56,370 +61,395 @@
       </nav>
     </header>
 
-    <aside
-      class="order-3 overflow-auto border-t border-zinc-200 bg-white p-4 lg:order-0 lg:col-start-1 lg:row-start-2 lg:border-t-0 lg:border-r dark:border-zinc-800 dark:bg-zinc-900"
-      aria-label="Settings"
-    >
-      <h2
-        class="m-0 mb-3.5 text-xs font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+      <aside
+        class="order-2 min-h-0 overflow-auto border-t border-zinc-200 bg-white p-4 lg:order-0 lg:w-65 lg:shrink-0 lg:border-t-0 lg:border-r dark:border-zinc-800 dark:bg-zinc-900"
+        aria-label="Settings"
       >
-        Settings
-      </h2>
-      <form id="settings" class="grid gap-4">
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          Seed
-          <span class="grid grid-cols-[1fr_auto] gap-1.5">
-            <input
-              id="seed"
-              name="seed"
-              type="text"
-              spellcheck="false"
-              autocomplete="off"
-              placeholder="UUID or number"
-              class="w-full min-w-0 rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            />
-            <button
-              id="seed-random"
-              type="button"
-              title="Generate a new random seed"
-              aria-label="Generate a new random seed"
-              class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            >
-              <span aria-hidden="true">↻</span>
-            </button>
-          </span>
-        </label>
-
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          <span class="flex items-baseline justify-between gap-2">
-            <span>Zoom</span>
-            <output
-              id="zoom-label"
-              for="zoom"
-              class="text-sm text-zinc-900 tabular-nums dark:text-zinc-100"
-              >12px</output
-            >
-          </span>
-          <input
-            id="zoom"
-            name="zoom"
-            type="range"
-            min="2"
-            max="48"
-            step="1"
-            value="12"
-            class="w-full"
-          />
-        </label>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Foreground
-            <input
-              id="fg"
-              name="fg"
-              type="color"
-              value="#111111"
-              class="h-9 w-full rounded-lg border border-zinc-300 bg-zinc-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800"
-            />
-          </label>
-          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Background
-            <input
-              id="bg"
-              name="bg"
-              type="color"
-              value="#ffffff"
-              class="h-9 w-full rounded-lg border border-zinc-300 bg-zinc-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800"
-            />
-          </label>
-        </div>
-
-        <label
-          class="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100"
-        >
-          <input
-            id="grid"
-            name="grid"
-            type="checkbox"
-            checked
-            class="size-4 accent-blue-600"
-          />
-          Show grid
-        </label>
-
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          Mode
-          <select
-            id="mode"
-            name="mode"
-            title="Board interaction mode"
-            class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          >
-            <option value="spawn">Spawn</option>
-            <option value="inspect">Inspect</option>
-          </select>
-        </label>
-
-        <hr
-          class="my-1 border-0 border-t border-zinc-200 dark:border-zinc-800"
-        />
-
         <h2
-          class="m-0 text-xs font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+          class="m-0 mb-3.5 text-xs font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
         >
-          Spawn
+          Settings
+        </h2>
+        <form id="settings" class="grid gap-4">
+          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Seed
+            <span class="grid grid-cols-[1fr_auto] gap-1.5">
+              <input
+                id="seed"
+                name="seed"
+                type="text"
+                spellcheck="false"
+                autocomplete="off"
+                placeholder="UUID or number"
+                class="w-full min-w-0 rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              />
+              <button
+                id="seed-random"
+                type="button"
+                title="Generate a new random seed"
+                aria-label="Generate a new random seed"
+                class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                <span aria-hidden="true">↻</span>
+              </button>
+            </span>
+          </label>
+
+          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            <span class="flex items-baseline justify-between gap-2">
+              <span>Zoom</span>
+              <output
+                id="zoom-label"
+                for="zoom"
+                class="text-sm text-zinc-900 tabular-nums dark:text-zinc-100"
+                >12px</output
+              >
+            </span>
+            <input
+              id="zoom"
+              name="zoom"
+              type="range"
+              min="2"
+              max="48"
+              step="1"
+              value="12"
+              class="w-full"
+            />
+          </label>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <label
+              class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400"
+            >
+              Foreground
+              <input
+                id="fg"
+                name="fg"
+                type="color"
+                value="#111111"
+                class="h-9 w-full rounded-lg border border-zinc-300 bg-zinc-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800"
+              />
+            </label>
+            <label
+              class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400"
+            >
+              Background
+              <input
+                id="bg"
+                name="bg"
+                type="color"
+                value="#ffffff"
+                class="h-9 w-full rounded-lg border border-zinc-300 bg-zinc-100 p-0.5 dark:border-zinc-700 dark:bg-zinc-800"
+              />
+            </label>
+          </div>
+
+          <label
+            class="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100"
+          >
+            <input
+              id="grid"
+              name="grid"
+              type="checkbox"
+              checked
+              class="size-4 accent-blue-600"
+            />
+            Show grid
+          </label>
+
+          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Mode
+            <select
+              id="mode"
+              name="mode"
+              title="Board interaction mode"
+              class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="spawn">Spawn</option>
+              <option value="inspect">Inspect</option>
+            </select>
+          </label>
+
+          <hr
+            class="my-1 border-0 border-t border-zinc-200 dark:border-zinc-800"
+          />
+
+          <h2
+            class="m-0 text-xs font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+          >
+            Spawn
+          </h2>
+
+          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Pattern
+            <select
+              id="spawn"
+              name="spawn"
+              title="Pattern to place in spawn mode"
+              class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            ></select>
+          </label>
+
+          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Orientation
+            <select
+              id="spawn-rot"
+              name="rot"
+              title="Rotate the spawn pattern"
+              class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="0">0°</option>
+              <option value="90">90°</option>
+              <option value="180">180°</option>
+              <option value="270">270°</option>
+            </select>
+          </label>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <label
+              class="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100"
+            >
+              <input
+                id="spawn-flip-x"
+                name="flipX"
+                type="checkbox"
+                class="size-4 accent-blue-600"
+              />
+              Flip X
+            </label>
+            <label
+              class="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100"
+            >
+              <input
+                id="spawn-flip-y"
+                name="flipY"
+                type="checkbox"
+                class="size-4 accent-blue-600"
+              />
+              Flip Y
+            </label>
+          </div>
+
+          <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Cursor anchor
+            <select
+              id="spawn-anchor"
+              name="anchor"
+              title="Where the cursor anchors the pattern"
+              class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="center">Center</option>
+              <option value="corner">Top-left</option>
+            </select>
+          </label>
+        </form>
+      </aside>
+
+      <main
+        class="relative order-1 grid min-h-[55vh] min-w-0 flex-1 bg-[radial-gradient(1200px_500px_at_50%_0%,rgba(37,99,235,0.12),transparent_60%),#f4f4f5] p-3 lg:order-0 lg:min-h-0 dark:bg-[radial-gradient(1200px_500px_at_50%_0%,rgba(121,184,255,0.10),transparent_60%),#09090b]"
+        aria-label="Simulation"
+      >
+        <canvas
+          id="life"
+          width="800"
+          height="600"
+          role="img"
+          aria-label="Game of Life board. In spawn mode, click to place the selected pattern."
+          class="block aspect-[unset] h-full min-h-0 w-full rounded-xl border border-zinc-300 bg-black shadow-sm dark:border-zinc-700"
+        ></canvas>
+
+        <div
+          class="pointer-events-none absolute inset-x-3 bottom-6 flex justify-center px-2 sm:px-3"
+        >
+          <div
+            class="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-2 rounded-xl border border-zinc-300/80 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm dark:border-zinc-700/80 dark:bg-zinc-900/90"
+          >
+            <label
+              for="speed"
+              class="flex items-center gap-2 text-sm whitespace-nowrap text-zinc-500 dark:text-zinc-400"
+            >
+              Speed
+              <input
+                id="speed"
+                type="range"
+                min="5"
+                max="1000"
+                step="1"
+                value="40"
+                class="w-28 sm:w-35"
+                title="Milliseconds between generations while playing"
+                aria-describedby="speed-label"
+              />
+              <span id="speed-label">40 ms</span>
+            </label>
+
+            <div
+              class="mx-0.5 hidden h-6 w-px bg-zinc-300 sm:block dark:bg-zinc-700"
+              aria-hidden="true"
+            ></div>
+
+            <div
+              class="flex flex-wrap items-center justify-center gap-2"
+              role="group"
+              aria-label="Playback controls"
+            >
+              <button
+                id="play"
+                type="button"
+                title="Play simulation"
+                aria-label="Play simulation"
+                aria-pressed="false"
+                class="cursor-pointer appearance-none rounded-lg border border-blue-600 bg-blue-600 px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 dark:border-blue-400 dark:bg-blue-400 dark:text-zinc-950"
+              >
+                Play
+              </button>
+              <button
+                id="reset"
+                type="button"
+                title="Reset board to the random seed soup"
+                aria-label="Reset board to the random seed soup"
+                class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                Reset
+              </button>
+              <button
+                id="clear"
+                type="button"
+                title="Clear all live cells from the board"
+                aria-label="Clear all live cells from the board"
+                class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                Clear
+              </button>
+              <div
+                class="mx-0.5 h-6 w-px bg-zinc-300 dark:bg-zinc-700"
+                aria-hidden="true"
+              ></div>
+              <button
+                id="prev"
+                type="button"
+                title="Step back one generation"
+                aria-label="Step back one generation"
+                class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                Prev
+              </button>
+              <button
+                id="next"
+                type="button"
+                title="Step forward one generation"
+                aria-label="Step forward one generation"
+                class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside
+        class="order-3 min-h-0 overflow-auto border-t border-zinc-200 bg-white p-4 lg:order-0 lg:w-90 lg:shrink-0 lg:border-t-0 lg:border-l dark:border-zinc-800 dark:bg-zinc-900"
+        aria-label="About the rules"
+      >
+        <h2
+          class="m-0 mb-3.5 text-xs font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+        >
+          Rules
         </h2>
 
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          Pattern
-          <select
-            id="spawn"
-            name="spawn"
-            title="Pattern to place in spawn mode"
-            class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          ></select>
-        </label>
+        <h3 class="mt-0 mb-1.5 text-[0.95rem] font-semibold">What is this?</h3>
+        <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+          Conway's Game of Life is a cellular automaton on an infinite grid.
+          Each cell is either alive or dead. Time advances in discrete
+          generations.
+        </p>
 
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          Orientation
-          <select
-            id="spawn-rot"
-            name="rot"
-            title="Rotate the spawn pattern"
-            class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+        <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">B3/S23</h3>
+        <ul
+          class="m-0 mb-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-500 dark:text-zinc-400"
+        >
+          <li>
+            <strong class="text-zinc-900 dark:text-zinc-100">Birth:</strong> a
+            dead cell with exactly
+            <code
+              class="rounded bg-zinc-100 px-1 py-0.5 text-[0.84em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+              >3</code
+            >
+            live neighbors becomes alive.
+          </li>
+          <li>
+            <strong class="text-zinc-900 dark:text-zinc-100">Survival:</strong>
+            a live cell with
+            <code
+              class="rounded bg-zinc-100 px-1 py-0.5 text-[0.84em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+              >2</code
+            >
+            or
+            <code
+              class="rounded bg-zinc-100 px-1 py-0.5 text-[0.84em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+              >3</code
+            >
+            live neighbors stays alive.
+          </li>
+          <li>
+            <strong class="text-zinc-900 dark:text-zinc-100">Death:</strong>
+            otherwise the cell dies or stays dead (under/overpopulation).
+          </li>
+        </ul>
+
+        <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">Pattern types</h3>
+        <ul
+          class="m-0 mb-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-500 dark:text-zinc-400"
+        >
+          <li>
+            <strong class="text-zinc-900 dark:text-zinc-100"
+              >Still lifes</strong
+            >
+            — stable shapes that never change.
+          </li>
+          <li>
+            <strong class="text-zinc-900 dark:text-zinc-100"
+              >Oscillators</strong
+            >
+            — cycle through a fixed period.
+          </li>
+          <li>
+            <strong class="text-zinc-900 dark:text-zinc-100">Spaceships</strong>
+            — translate across the grid over time.
+          </li>
+        </ul>
+
+        <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">Controls</h3>
+        <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+          <strong class="text-zinc-900 dark:text-zinc-100">Seed</strong> drives
+          a deterministic random soup. The same seed always produces the same
+          starting cells.
+          <strong class="text-zinc-900 dark:text-zinc-100">Mode</strong>
+          switches board interaction:
+          <strong class="text-zinc-900 dark:text-zinc-100">Spawn</strong> shows
+          a pattern ghost and places on click;
+          <strong class="text-zinc-900 dark:text-zinc-100">Inspect</strong>
+          highlights the cell under the cursor and names catalog shapes when the
+          live cluster matches a seed (any rotation/flip).
+          <strong class="text-zinc-900 dark:text-zinc-100"
+            >Cursor anchor</strong
           >
-            <option value="0">0°</option>
-            <option value="90">90°</option>
-            <option value="180">180°</option>
-            <option value="270">270°</option>
-          </select>
-        </label>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <label
-            class="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100"
-          >
-            <input
-              id="spawn-flip-x"
-              name="flipX"
-              type="checkbox"
-              class="size-4 accent-blue-600"
-            />
-            Flip X
-          </label>
-          <label
-            class="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-900 dark:text-zinc-100"
-          >
-            <input
-              id="spawn-flip-y"
-              name="flipY"
-              type="checkbox"
-              class="size-4 accent-blue-600"
-            />
-            Flip Y
-          </label>
-        </div>
-
-        <label class="grid gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-          Cursor anchor
-          <select
-            id="spawn-anchor"
-            name="anchor"
-            title="Where the cursor anchors the pattern"
-            class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          >
-            <option value="center">Center</option>
-            <option value="corner">Top-left</option>
-          </select>
-        </label>
-      </form>
-    </aside>
-
-    <main
-      class="order-2 grid min-h-[55vh] min-w-0 bg-[radial-gradient(1200px_500px_at_50%_0%,rgba(37,99,235,0.12),transparent_60%),#f4f4f5] p-3 lg:order-0 lg:col-start-2 lg:row-start-2 lg:min-h-0 dark:bg-[radial-gradient(1200px_500px_at_50%_0%,rgba(121,184,255,0.10),transparent_60%),#09090b]"
-      aria-label="Simulation"
-    >
-      <canvas
-        id="life"
-        width="800"
-        height="600"
-        role="img"
-        aria-label="Game of Life board. In spawn mode, click to place the selected pattern."
-        class="block h-full w-full rounded-xl border border-zinc-300 bg-black shadow-sm dark:border-zinc-700"
-      ></canvas>
-    </main>
-
-    <aside
-      class="order-4 overflow-auto border-t border-zinc-200 bg-white p-4 lg:order-0 lg:col-start-3 lg:row-start-2 lg:border-t-0 lg:border-l dark:border-zinc-800 dark:bg-zinc-900"
-      aria-label="About the rules"
-    >
-      <h2
-        class="m-0 mb-3.5 text-xs font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
-      >
-        Rules
-      </h2>
-
-      <h3 class="mt-0 mb-1.5 text-[0.95rem] font-semibold">What is this?</h3>
-      <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
-        Conway's Game of Life is a cellular automaton on an infinite grid. Each
-        cell is either alive or dead. Time advances in discrete generations.
-      </p>
-
-      <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">B3/S23</h3>
-      <ul
-        class="m-0 mb-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-500 dark:text-zinc-400"
-      >
-        <li>
-          <strong class="text-zinc-900 dark:text-zinc-100">Birth:</strong> a
-          dead cell with exactly
-          <code
-            class="rounded bg-zinc-100 px-1 py-0.5 text-[0.84em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-            >3</code
-          >
-          live neighbors becomes alive.
-        </li>
-        <li>
-          <strong class="text-zinc-900 dark:text-zinc-100">Survival:</strong> a
-          live cell with
-          <code
-            class="rounded bg-zinc-100 px-1 py-0.5 text-[0.84em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-            >2</code
-          >
-          or
-          <code
-            class="rounded bg-zinc-100 px-1 py-0.5 text-[0.84em] text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-            >3</code
-          >
-          live neighbors stays alive.
-        </li>
-        <li>
-          <strong class="text-zinc-900 dark:text-zinc-100">Death:</strong>
-          otherwise the cell dies or stays dead (under/overpopulation).
-        </li>
-      </ul>
-
-      <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">Pattern types</h3>
-      <ul
-        class="m-0 mb-3 list-disc space-y-1.5 pl-5 text-sm text-zinc-500 dark:text-zinc-400"
-      >
-        <li>
-          <strong class="text-zinc-900 dark:text-zinc-100">Still lifes</strong>
-          — stable shapes that never change.
-        </li>
-        <li>
-          <strong class="text-zinc-900 dark:text-zinc-100">Oscillators</strong>
-          — cycle through a fixed period.
-        </li>
-        <li>
-          <strong class="text-zinc-900 dark:text-zinc-100">Spaceships</strong> —
-          translate across the grid over time.
-        </li>
-      </ul>
-
-      <h3 class="mt-4 mb-1.5 text-[0.95rem] font-semibold">Controls</h3>
-      <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
-        <strong class="text-zinc-900 dark:text-zinc-100">Seed</strong> drives a
-        deterministic random soup. The same seed always produces the same
-        starting cells.
-        <strong class="text-zinc-900 dark:text-zinc-100">Mode</strong> switches
-        board interaction:
-        <strong class="text-zinc-900 dark:text-zinc-100">Spawn</strong> shows a
-        pattern ghost and places on click;
-        <strong class="text-zinc-900 dark:text-zinc-100">Inspect</strong>
-        highlights the cell under the cursor.
-        <strong class="text-zinc-900 dark:text-zinc-100">Cursor anchor</strong>
-        chooses center vs top-left for spawn placement.
-      </p>
-      <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
-        Use the footer to play, step, reset to seed, or clear the board.
-        Settings are stored in the URL.
-      </p>
-    </aside>
+          chooses center vs top-left for spawn placement.
+        </p>
+        <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+          Use the on-canvas bar to play, step, reset to seed, or clear the
+          board. Settings are stored in the URL.
+        </p>
+      </aside>
+    </div>
 
     <footer
-      class="order-5 col-span-full grid grid-cols-1 items-center gap-3 border-t border-zinc-200 bg-white px-4 py-2.5 md:grid-cols-3 lg:order-0 lg:row-start-3 dark:border-zinc-800 dark:bg-zinc-900"
+      class="shrink-0 overflow-x-auto border-t border-zinc-200 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-900"
     >
-      <div class="flex items-center justify-center md:justify-start">
-        <label
-          for="speed"
-          class="flex items-center gap-2 text-sm whitespace-nowrap text-zinc-500 dark:text-zinc-400"
-        >
-          Speed
-          <input
-            id="speed"
-            type="range"
-            min="5"
-            max="1000"
-            step="1"
-            value="40"
-            class="w-35"
-            title="Milliseconds between generations while playing"
-            aria-describedby="speed-label"
-          />
-          <span id="speed-label">40 ms</span>
-        </label>
-      </div>
-
       <div
-        class="flex flex-wrap items-center justify-center gap-2.5"
-        role="group"
-        aria-label="Playback controls"
-      >
-        <button
-          id="play"
-          type="button"
-          title="Play simulation"
-          aria-label="Play simulation"
-          aria-pressed="false"
-          class="cursor-pointer appearance-none rounded-lg border border-blue-600 bg-blue-600 px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 dark:border-blue-400 dark:bg-blue-400 dark:text-zinc-950"
-        >
-          Play
-        </button>
-        <button
-          id="reset"
-          type="button"
-          title="Reset board to the random seed soup"
-          aria-label="Reset board to the random seed soup"
-          class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-        >
-          Reset
-        </button>
-        <button
-          id="clear"
-          type="button"
-          title="Clear all live cells from the board"
-          aria-label="Clear all live cells from the board"
-          class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-        >
-          Clear
-        </button>
-        <div
-          class="mx-1 h-6 w-px bg-zinc-300 dark:bg-zinc-700"
-          aria-hidden="true"
-        ></div>
-        <button
-          id="prev"
-          type="button"
-          title="Step back one generation"
-          aria-label="Step back one generation"
-          class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-        >
-          Prev
-        </button>
-        <button
-          id="next"
-          type="button"
-          title="Step forward one generation"
-          aria-label="Step forward one generation"
-          class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-        >
-          Next
-        </button>
-      </div>
-
-      <div
-        class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-zinc-500 tabular-nums md:justify-end dark:text-zinc-400"
+        class="flex items-center justify-center gap-x-5 text-sm whitespace-nowrap text-zinc-500 tabular-nums dark:text-zinc-400"
         role="status"
         aria-live="polite"
         aria-atomic="false"
@@ -445,6 +475,14 @@
           >Cursor
           <strong
             id="status-cursor"
+            class="font-semibold text-zinc-900 dark:text-zinc-100"
+            >—</strong
+          ></span
+        >
+        <span
+          >Pattern
+          <strong
+            id="status-pattern"
             class="font-semibold text-zinc-900 dark:text-zinc-100"
             >—</strong
           ></span

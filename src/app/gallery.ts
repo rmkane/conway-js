@@ -275,4 +275,5 @@ toggleButton.addEventListener('click', () => {
 syncToggleUi()
 
 speedLabel.textContent = `${generationDuration} ms`
+document.documentElement.classList.remove('boot-pending')
 requestAnimationFrame(tick)

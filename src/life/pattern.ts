@@ -8,7 +8,7 @@ import { type AliveSet, bbox, unpack } from '@/life/cells.ts'
 import { parseShapeRows } from '@/life/shape.ts'
 
 /** Normalize live cells to top-left origin offsets. */
-function aliveToOffsets(alive: AliveSet): Offset[] {
+export function aliveToOffsets(alive: AliveSet): Offset[] {
   if (!alive.size) return []
   const { minX, minY } = bbox(alive)
   const offsets: Offset[] = []

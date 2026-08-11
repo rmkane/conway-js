@@ -54,6 +54,7 @@ src/
     pattern.ts             Shape rows → transformed offsets
     rng.ts                 Random soup (uses @conway/rng)
     data.ts                Pattern catalog
+    identify.ts            Hover: match live clusters to catalog
     paint.ts               Canvas paint from a scene snapshot
     conway.ts              Simulation engine + interaction types
   styles/

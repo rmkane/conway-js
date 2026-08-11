@@ -13,6 +13,7 @@ import {
   pack,
   stepAlive,
 } from '@/life/cells.ts'
+import { CATALOG_INDEX, identifyAt, type PatternHit } from '@/life/identify.ts'
 import { paintLife } from '@/life/paint.ts'
 import { patternOffsets } from '@/life/pattern.ts'
 import { randomSoup } from '@/life/rng.ts'
@@ -62,6 +63,8 @@ export class Conway {
   originX = 0
   originY = 0
   hoverCell: Point | null = null
+  /** Catalog match for the connected cluster under the hover cell (inspect). */
+  hoverMatch: PatternHit | null = null
   /** Offsets from top-left for spawn ghost. */
   ghostTemplate: Offset[] | null = null
   ghostAnchor: AnchorMode = 'center'
@@ -157,6 +160,7 @@ export class Conway {
 
   setMode(mode: InteractionMode): void {
     this.mode = mode === 'inspect' ? 'inspect' : 'spawn'
+    this._refreshHoverMatch()
     this.scheduleRender()
   }
 
@@ -272,6 +276,7 @@ export class Conway {
       alive: this.alive,
       mode: this.mode,
       hoverCell: this.hoverCell,
+      hoverMatch: this.hoverMatch,
       ghostTemplate: this.ghostTemplate,
       ghostAnchor: this.ghostAnchor,
     })
@@ -284,6 +289,7 @@ export class Conway {
       (prev && cell && prev.x === cell.x && prev.y === cell.y)
     if (same) return
     this.hoverCell = cell ? { x: cell.x, y: cell.y } : null
+    this._refreshHoverMatch()
     this.scheduleRender()
   }
 
@@ -334,7 +340,21 @@ export class Conway {
     this.originY = (minY + maxY + 1) / 2
   }
 
+  private _refreshHoverMatch(): void {
+    if (this.mode !== 'inspect' || !this.hoverCell) {
+      this.hoverMatch = null
+      return
+    }
+    this.hoverMatch = identifyAt(
+      this.alive,
+      this.hoverCell.x,
+      this.hoverCell.y,
+      CATALOG_INDEX,
+    )
+  }
+
   private _emit(): void {
+    this._refreshHoverMatch()
     this._onChange?.(this)
   }
 }
