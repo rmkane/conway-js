@@ -1,7 +1,11 @@
 // Pattern shapes only (tight bounding box). Later generations use B3/S23.
 // '#' = alive, '.' = dead.
 
-export type PatternCategory = 'Still lifes' | 'Oscillators' | 'Spaceships'
+export type PatternCategory =
+  | 'Still lifes'
+  | 'Oscillators'
+  | 'Spaceships'
+  | 'Guns'
 
 export interface LifePattern {
   name: string
@@ -137,5 +141,23 @@ export const LIFE_PATTERNS: Record<string, LifePattern> = {
     period: 4,
     velocity: [2, 0],
     shape: ['.######.', '#.....#.', '......#.', '#....#..', '..##....'],
+  },
+  gosperGliderGun: {
+    name: "Gosper's glider gun",
+    category: 'Guns',
+    period: 30,
+    // Room for a few SE-bound gliders on the gallery board.
+    pad: { x: 14, y: 14 },
+    shape: [
+      '........................#...........',
+      '......................#.#...........',
+      '............##......##............##',
+      '...........#...#....##............##',
+      '##........#.....#...##..............',
+      '##........#...#.##....#.#...........',
+      '..........#.....#.......#...........',
+      '...........#...#....................',
+      '............##......................',
+    ],
   },
 }

@@ -33,6 +33,7 @@ const playBtn = mustGet('#play', HTMLButtonElement)
 const prevBtn = mustGet('#prev', HTMLButtonElement)
 const nextBtn = mustGet('#next', HTMLButtonElement)
 const resetBtn = mustGet('#reset', HTMLButtonElement)
+const clearBtn = mustGet('#clear', HTMLButtonElement)
 const speedInput = mustGet('#speed', HTMLInputElement)
 const speedLabel = mustGet('#speed-label', HTMLElement)
 const statusGen = mustGet('#status-gen', HTMLElement)
@@ -230,6 +231,12 @@ nextBtn.addEventListener('click', () => {
 resetBtn.addEventListener('click', () => {
   game.pause()
   game.resetToSeed()
+  syncStatus()
+})
+
+clearBtn.addEventListener('click', () => {
+  game.pause()
+  game.clear()
   syncStatus()
 })
 

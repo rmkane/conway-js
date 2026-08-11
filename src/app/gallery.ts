@@ -1,6 +1,12 @@
 import { el, mustGet } from '@conway/dom'
 
-import { type AliveSet, homeAlive, pack, stepAlive } from '@/life/cells.ts'
+import {
+  type AliveSet,
+  homeAlive,
+  pack,
+  stepAlive,
+  unpack,
+} from '@/life/cells.ts'
 import {
   LIFE_PATTERNS,
   type LifePattern,
@@ -46,6 +52,16 @@ function boardPad(pattern: LifePattern): { x: number; y: number } {
   return { x: n, y: n }
 }
 
+/** Drop cells that left the visible board (guns emit ships forever). */
+function clipAlive(alive: AliveSet, cols: number, rows: number): AliveSet {
+  const next: AliveSet = new Set()
+  for (const key of alive) {
+    const [x, y] = unpack(key)
+    if (x >= 0 && y >= 0 && x < cols && y < rows) next.add(key)
+  }
+  return next
+}
+
 function prepareTransition(item: GalleryItem): void {
   if (item.pattern.period === 1) {
     item.pendingAlive = item.alive
@@ -64,7 +80,7 @@ function prepareTransition(item: GalleryItem): void {
   } else {
     item.moveX = 0
     item.moveY = 0
-    item.pendingAlive = next
+    item.pendingAlive = clipAlive(next, item.cols, item.rows)
   }
 }
 
@@ -174,7 +190,12 @@ function makePatternCard(pattern: LifePattern): GalleryItem {
   return item
 }
 
-const groups: PatternCategory[] = ['Still lifes', 'Oscillators', 'Spaceships']
+const groups: PatternCategory[] = [
+  'Still lifes',
+  'Oscillators',
+  'Spaceships',
+  'Guns',
+]
 const rendered: GalleryItem[] = []
 
 for (const groupName of groups) {

@@ -188,6 +188,17 @@ export class Conway {
     this._emit()
   }
 
+  /** Empty the board (keeps the random seed for Reset). */
+  clear(options: { render?: boolean } = {}): void {
+    this.alive = new Set()
+    this.history = []
+    this.generation = 0
+    this.originX = 0
+    this.originY = 0
+    if (options.render !== false) this.scheduleRender()
+    this._emit()
+  }
+
   /** Advance one generation. Safe to spam; paint is debounced. */
   next(): void {
     this.history.push(cloneAlive(this.alive))
