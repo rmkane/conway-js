@@ -31,7 +31,7 @@ src/
   params.ts         URL query-param parse / write
   simulator.ts      Simulator UI binding
   about.ts          Gallery animations
-  life-data.ts      Seed patterns
+  life-data.ts      Pattern shapes
   styles/main.css   Tailwind entry + gallery board CSS
 ```
 

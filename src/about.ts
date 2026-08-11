@@ -47,18 +47,27 @@ function unpack(key: string): [number, number] {
   return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
 }
 
-function parseSeed(seed: string[]): {
+function parseShape(shape: string[]): {
   alive: AliveSet
   cols: number
   rows: number
 } {
   const alive: AliveSet = new Set()
-  for (let y = 0; y < seed.length; y++) {
-    for (let x = 0; x < seed[y].length; x++) {
-      if (seed[y][x] === '#') alive.add(pack(x, y))
+  let cols = 0
+  for (let y = 0; y < shape.length; y++) {
+    cols = Math.max(cols, shape[y].length)
+    for (let x = 0; x < shape[y].length; x++) {
+      if (shape[y][x] === '#') alive.add(pack(x, y))
     }
   }
-  return { alive, cols: seed[0].length, rows: seed.length }
+  return { alive, cols, rows: shape.length }
+}
+
+/** Gallery boards add margin so oscillators/ships can move without clipping. */
+function boardPad(pattern: LifePattern): { x: number; y: number } {
+  if (pattern.pad) return pattern.pad
+  const n = pattern.category === 'Still lifes' ? 1 : 2
+  return { x: n, y: n }
 }
 
 function step(alive: AliveSet): AliveSet {
@@ -183,11 +192,12 @@ function renderCells(item: GalleryItem): void {
 }
 
 function makePatternCard(pattern: LifePattern): GalleryItem {
-  const parsed = parseSeed(pattern.seed)
+  const parsed = parseShape(pattern.shape)
   const isShip = pattern.category === 'Spaceships'
-  const cols = parsed.cols
-  const rows = parsed.rows
-  const alive = isShip ? homeAlive(parsed.alive, cols, rows) : parsed.alive
+  const pad = boardPad(pattern)
+  const cols = parsed.cols + pad.x * 2
+  const rows = parsed.rows + pad.y * 2
+  const alive = homeAlive(parsed.alive, cols, rows)
 
   const card = document.createElement('article')
   card.className =
@@ -204,7 +214,7 @@ function makePatternCard(pattern: LifePattern): GalleryItem {
   info.className = 'whitespace-nowrap text-xs text-zinc-500 dark:text-zinc-400'
   info.textContent =
     pattern.period === 1
-      ? 'still · seed only'
+      ? 'still · shape only'
       : `period ${pattern.period} · computed`
 
   header.append(title, info)

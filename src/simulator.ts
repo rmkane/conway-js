@@ -115,7 +115,7 @@ function syncGhost(): void {
     game.setGhostPattern(null)
     return
   }
-  game.setGhostPattern(pattern.seed, {
+  game.setGhostPattern(pattern.shape, {
     rotation: parseRotation(Number(spawnRotSelect.value) || 0),
     flipX: spawnFlipXInput.checked,
     flipY: spawnFlipYInput.checked,
@@ -246,7 +246,7 @@ canvas.addEventListener('click', (event) => {
 
   const pattern = LIFE_PATTERNS[state.spawn]
   if (!pattern) return
-  game.spawn(pattern.seed, cell.x, cell.y, spawnOptions(state))
+  game.spawn(pattern.shape, cell.x, cell.y, spawnOptions(state))
   syncStatus()
 })
 
