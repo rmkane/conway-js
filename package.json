@@ -2,6 +2,15 @@
   "name": "conway",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://github.com/rmkane/conway-js#readme",
+  "bugs": {
+    "url": "https://github.com/rmkane/conway-js/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rmkane/conway-js.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

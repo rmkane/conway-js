@@ -2,6 +2,8 @@
 
 Browser app with a full simulator and a pattern gallery.
 
+Repository: [github.com/rmkane/conway-js](https://github.com/rmkane/conway-js)
+
 Stack: Vite, TypeScript, Tailwind CSS, pnpm, Oxfmt, Oxlint, Vitest, and Fallow.
 
 ```bash
@@ -69,3 +71,7 @@ scripts/install-hooks.sh
 | `flipX` / `flipY` | Mirror spawn pattern (`1` / `0`)                        |
 
 Refreshing always restores generation 0 from the PRNG `seed` (spawns are not replayed).
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
