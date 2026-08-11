@@ -25,6 +25,14 @@ Fallow scripts (`pnpm analyze:*` / `make analyze-*`): `analyze` (dead-code+dupes
 
 CI (`.github/workflows/ci.yml`) runs the same gate on Node 24 with pnpm.
 
+## Deploy
+
+```bash
+make build   # writes dist/
+```
+
+Asset URLs are relative (`base: './'`), so you can serve or drop `dist/` from any path (site root or a subdirectory). Upload the whole folder, including `dist/assets/`.
+
 ## Layout
 
 ```none

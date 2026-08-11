@@ -9,6 +9,10 @@ export type ElProps = {
   type?: string
   value?: string
   selected?: boolean
+  role?: string
+  ariaLabel?: string
+  ariaHidden?: boolean | 'true' | 'false'
+  ariaPressed?: boolean | 'true' | 'false'
   /** CSS custom props / declarations via setProperty. */
   style?: Record<string, string>
 }
@@ -32,6 +36,15 @@ function applyStyle(node: HTMLElement, style: Record<string, string>): void {
   }
 }
 
+function applyAria(
+  node: HTMLElement,
+  name: string,
+  value: boolean | string | undefined,
+): void {
+  if (value == null) return
+  node.setAttribute(name, typeof value === 'boolean' ? String(value) : value)
+}
+
 function applyProps(node: HTMLElement, props: ElProps): void {
   assignIf(props.className, (v) => {
     node.className = v
@@ -45,8 +58,14 @@ function applyProps(node: HTMLElement, props: ElProps): void {
   assignIf(props.title, (v) => {
     node.title = v
   })
+  assignIf(props.role, (v) => {
+    node.setAttribute('role', v)
+  })
   assignIf(props.value, (v) => setValue(node, v))
   assignIf(props.style, (v) => applyStyle(node, v))
+  applyAria(node, 'aria-label', props.ariaLabel)
+  applyAria(node, 'aria-hidden', props.ariaHidden)
+  applyAria(node, 'aria-pressed', props.ariaPressed)
 
   if (props.type != null && node instanceof HTMLInputElement) {
     node.type = props.type

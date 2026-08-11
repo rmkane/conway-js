@@ -24,6 +24,19 @@ describe('el', () => {
   })
 })
 
+describe('el aria props', () => {
+  it('sets aria-label and role', () => {
+    const node = el('div', {
+      role: 'img',
+      ariaLabel: 'Board',
+      title: 'Preview',
+    })
+    expect(node.getAttribute('role')).toBe('img')
+    expect(node.getAttribute('aria-label')).toBe('Board')
+    expect(node.title).toBe('Preview')
+  })
+})
+
 describe('mustGet', () => {
   it('returns a matching element', () => {
     document.body.append(el('div', { id: 'root' }))

@@ -151,8 +151,11 @@ function runningLabels(running: boolean): {
 
 function syncPlayUi(running: boolean): void {
   const labels = runningLabels(running)
+  const action = running ? 'Pause simulation' : 'Play simulation'
   statusState.textContent = labels.state
   playBtn.textContent = labels.play
+  playBtn.title = action
+  playBtn.setAttribute('aria-label', action)
   playBtn.setAttribute('aria-pressed', labels.pressed)
   prevBtn.disabled = running || game.generation === 0
   nextBtn.disabled = running

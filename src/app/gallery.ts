@@ -155,6 +155,11 @@ function makePatternCard(pattern: LifePattern): GalleryItem {
     'div',
     {
       className: 'life-board border border-zinc-300 dark:border-zinc-700',
+      role: 'img',
+      ariaLabel:
+        pattern.period === 1
+          ? `${pattern.name} still life`
+          : `${pattern.name}, period ${pattern.period}`,
       style: { '--rows': String(rows), '--cols': String(cols) },
     },
     inner,
@@ -253,11 +258,21 @@ speedInput.addEventListener('input', () => {
   speedLabel.textContent = `${generationDuration} ms`
 })
 
+function syncToggleUi(): void {
+  const action = running ? 'Pause gallery animation' : 'Play gallery animation'
+  toggleButton.textContent = running ? 'Pause' : 'Play'
+  toggleButton.title = action
+  toggleButton.setAttribute('aria-label', action)
+  toggleButton.setAttribute('aria-pressed', running ? 'true' : 'false')
+}
+
 toggleButton.addEventListener('click', () => {
   running = !running
-  toggleButton.textContent = running ? 'Pause' : 'Play'
+  syncToggleUi()
   if (running) generationStartedAt = 0
 })
+
+syncToggleUi()
 
 speedLabel.textContent = `${generationDuration} ms`
 requestAnimationFrame(tick)

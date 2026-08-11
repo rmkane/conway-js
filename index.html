@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Conway's Game of Life</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,11 +24,12 @@
       <h1 class="m-0 text-lg font-bold tracking-tight">
         Conway's Game of Life
       </h1>
-      <nav class="flex gap-3.5 text-sm">
+      <nav class="flex gap-3.5 text-sm" aria-label="Primary">
         <a
           id="about-link"
           class="text-blue-600 underline decoration-1 underline-offset-2 hover:no-underline dark:text-blue-400"
           href="./about.html"
+          title="Open the pattern gallery"
           >About &amp; patterns</a
         >
       </nav>
@@ -58,10 +60,11 @@
             <button
               id="seed-random"
               type="button"
-              title="New random seed"
+              title="Generate a new random seed"
+              aria-label="Generate a new random seed"
               class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             >
-              ↻
+              <span aria-hidden="true">↻</span>
             </button>
           </span>
         </label>
@@ -129,6 +132,7 @@
           <select
             id="mode"
             name="mode"
+            title="Board interaction mode"
             class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           >
             <option value="spawn">Spawn</option>
@@ -151,6 +155,7 @@
           <select
             id="spawn"
             name="spawn"
+            title="Pattern to place in spawn mode"
             class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           ></select>
         </label>
@@ -160,6 +165,7 @@
           <select
             id="spawn-rot"
             name="rot"
+            title="Rotate the spawn pattern"
             class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           >
             <option value="0">0°</option>
@@ -199,6 +205,7 @@
           <select
             id="spawn-anchor"
             name="anchor"
+            title="Where the cursor anchors the pattern"
             class="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           >
             <option value="center">Center</option>
@@ -216,6 +223,8 @@
         id="life"
         width="800"
         height="600"
+        role="img"
+        aria-label="Game of Life board. In spawn mode, click to place the selected pattern."
         class="block h-full w-full rounded-xl border border-zinc-300 bg-black shadow-sm dark:border-zinc-700"
       ></canvas>
     </main>
@@ -324,15 +333,23 @@
             step="1"
             value="40"
             class="w-35"
+            title="Milliseconds between generations while playing"
+            aria-describedby="speed-label"
           />
           <span id="speed-label">40 ms</span>
         </label>
       </div>
 
-      <div class="flex flex-wrap items-center justify-center gap-2.5">
+      <div
+        class="flex flex-wrap items-center justify-center gap-2.5"
+        role="group"
+        aria-label="Playback controls"
+      >
         <button
           id="play"
           type="button"
+          title="Play simulation"
+          aria-label="Play simulation"
           aria-pressed="false"
           class="cursor-pointer appearance-none rounded-lg border border-blue-600 bg-blue-600 px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 dark:border-blue-400 dark:bg-blue-400 dark:text-zinc-950"
         >
@@ -341,7 +358,8 @@
         <button
           id="reset"
           type="button"
-          title="Reset to seed"
+          title="Reset board to the random seed soup"
+          aria-label="Reset board to the random seed soup"
           class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         >
           Reset
@@ -349,7 +367,8 @@
         <button
           id="clear"
           type="button"
-          title="Clear the board"
+          title="Clear all live cells from the board"
+          aria-label="Clear all live cells from the board"
           class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         >
           Clear
@@ -361,7 +380,8 @@
         <button
           id="prev"
           type="button"
-          title="Previous generation"
+          title="Step back one generation"
+          aria-label="Step back one generation"
           class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         >
           Prev
@@ -369,7 +389,8 @@
         <button
           id="next"
           type="button"
-          title="Next generation"
+          title="Step forward one generation"
+          aria-label="Step forward one generation"
           class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         >
           Next
@@ -378,10 +399,13 @@
 
       <div
         class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-zinc-500 tabular-nums md:justify-end dark:text-zinc-400"
+        role="status"
         aria-live="polite"
+        aria-atomic="false"
+        aria-label="Simulation status"
       >
         <span
-          >Gen
+          >Generation
           <strong
             id="status-gen"
             class="font-semibold text-zinc-900 dark:text-zinc-100"
@@ -389,7 +413,7 @@
           ></span
         >
         <span
-          >Pop
+          >Population
           <strong
             id="status-pop"
             class="font-semibold text-zinc-900 dark:text-zinc-100"

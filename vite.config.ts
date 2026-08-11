@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  // Relative asset URLs so dropping `dist/` into any folder/subdir works.
+  base: './',
   plugins: [tailwindcss()],
   resolve: {
     alias: {
