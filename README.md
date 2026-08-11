@@ -24,23 +24,29 @@ CI (`.github/workflows/ci.yml`) runs the same gate on Node 24 with pnpm.
 ## Layout
 
 ```none
-index.html              Simulator shell
-about.html              Pattern gallery
-Makefile                Dev / quality targets
+index.html                 Simulator shell
+about.html                 Pattern gallery
+Makefile                   Dev / quality targets
+packages/
+  dom/                     @conway/dom — el() + mustGet() (no deps)
+  geom/                    @conway/geom — discrete 2D geometry
+  rng/                     @conway/rng — hashSeed + mulberry32 (no deps)
 src/
-  conway.ts             Canvas engine (update / render)
-  pattern.ts            Shape rotate / offsets / spawn anchor
-  rng.ts                PRNG + random soup
-  life.ts               Shared B3/S23 cell helpers
-  life-data.ts          Pattern shapes (`shape`, optional `pad`)
-  types.ts              Shared domain types
-  params.ts             URL query-param parse / write
-  simulator.ts          Simulator UI binding
-  about.ts              Gallery animations
-  dom.ts                Typed DOM helpers
-  styles/main.css       Tailwind entry
-  styles/life-board.css Gallery board CSS
-.githooks/pre-commit    Runs make precommit
+  app/                     Page entrypoints + URL params
+    simulator.ts
+    gallery.ts
+    params.ts
+  life/                    Domain: cells, shapes, engine
+    cells.ts               B3/S23 set helpers
+    shape.ts               #/. shape parser
+    pattern.ts             Shape rows → transformed offsets
+    rng.ts                 Random soup (uses @conway/rng)
+    data.ts                Pattern catalog
+    conway.ts              Canvas engine + interaction types
+  styles/
+    main.css               Tailwind entry
+    life-board.css         Gallery board CSS
+.githooks/pre-commit
 scripts/install-hooks.sh
 ```
 

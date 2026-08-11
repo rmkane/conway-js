@@ -1,4 +1,6 @@
-import type { AnchorMode, InteractionMode, Rotation } from '@/types.ts'
+import type { AnchorMode, Rotation } from '@conway/geom'
+
+import type { InteractionMode } from '@/life/conway.ts'
 
 export interface LifeParams {
   seed: string

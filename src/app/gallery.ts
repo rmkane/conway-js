@@ -1,16 +1,12 @@
-import { mustGet } from '@/dom.ts'
+import { el, mustGet } from '@conway/dom'
+
+import { type AliveSet, homeAlive, pack, stepAlive } from '@/life/cells.ts'
 import {
   LIFE_PATTERNS,
   type LifePattern,
   type PatternCategory,
-} from '@/life-data.ts'
-import {
-  type AliveSet,
-  homeAlive,
-  pack,
-  parseShapeRows,
-  stepAlive,
-} from '@/life.ts'
+} from '@/life/data.ts'
+import { parseShape } from '@/life/shape.ts'
 
 import '@/styles/main.css'
 
@@ -42,16 +38,6 @@ if (simLink) simLink.href = `./index.html${location.search}`
 let running = true
 let generationDuration = Number(speedInput.value)
 let generationStartedAt = 0
-
-function parseShape(shape: string[]): {
-  alive: AliveSet
-  cols: number
-  rows: number
-} {
-  const alive = parseShapeRows(shape)
-  const cols = shape.reduce((max, row) => Math.max(max, row.length), 0)
-  return { alive, cols, rows: shape.length }
-}
 
 /** Gallery boards add margin so oscillators/ships can move without clipping. */
 function boardPad(pattern: LifePattern): { x: number; y: number } {
@@ -112,11 +98,11 @@ function renderCells(item: GalleryItem): void {
   const frag = document.createDocumentFragment()
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      const cell = document.createElement('span')
-      cell.className = alive.has(pack(x, y))
-        ? 'life-cell is-alive'
-        : 'life-cell'
-      frag.append(cell)
+      frag.append(
+        el('span', {
+          className: alive.has(pack(x, y)) ? 'life-cell is-alive' : 'life-cell',
+        }),
+      )
     }
   }
   inner.replaceChildren(frag)
@@ -130,35 +116,42 @@ function makePatternCard(pattern: LifePattern): GalleryItem {
   const rows = parsed.rows + pad.y * 2
   const alive = homeAlive(parsed.alive, cols, rows)
 
-  const card = document.createElement('article')
-  card.className =
-    'min-h-[180px] rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3.5 shadow-sm'
+  const title = el('h3', {
+    className: 'm-0 text-[0.95rem] font-semibold',
+    textContent: pattern.name,
+  })
+  const info = el('span', {
+    className: 'whitespace-nowrap text-xs text-zinc-500 dark:text-zinc-400',
+    textContent:
+      pattern.period === 1
+        ? 'still · shape only'
+        : `period ${pattern.period} · computed`,
+  })
+  const header = el(
+    'div',
+    { className: 'mb-3.5 flex items-baseline justify-between gap-3' },
+    title,
+    info,
+  )
 
-  const header = document.createElement('div')
-  header.className = 'mb-3.5 flex items-baseline justify-between gap-3'
-
-  const title = document.createElement('h3')
-  title.className = 'm-0 text-[0.95rem] font-semibold'
-  title.textContent = pattern.name
-
-  const info = document.createElement('span')
-  info.className = 'whitespace-nowrap text-xs text-zinc-500 dark:text-zinc-400'
-  info.textContent =
-    pattern.period === 1
-      ? 'still · shape only'
-      : `period ${pattern.period} · computed`
-
-  header.append(title, info)
-
-  const board = document.createElement('div')
-  board.className = 'life-board border border-zinc-300 dark:border-zinc-700'
-  board.style.setProperty('--rows', String(rows))
-  board.style.setProperty('--cols', String(cols))
-
-  const inner = document.createElement('div')
-  inner.className = 'life-board-inner'
-  board.append(inner)
-  card.append(header, board)
+  const inner = el('div', { className: 'life-board-inner' })
+  const board = el(
+    'div',
+    {
+      className: 'life-board border border-zinc-300 dark:border-zinc-700',
+      style: { '--rows': String(rows), '--cols': String(cols) },
+    },
+    inner,
+  )
+  const card = el(
+    'article',
+    {
+      className:
+        'min-h-[180px] rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3.5 shadow-sm',
+    },
+    header,
+    board,
+  )
 
   const item: GalleryItem = {
     card,
@@ -185,27 +178,29 @@ const groups: PatternCategory[] = ['Still lifes', 'Oscillators', 'Spaceships']
 const rendered: GalleryItem[] = []
 
 for (const groupName of groups) {
-  const section = document.createElement('section')
-  section.className = 'mb-9'
+  const items = Object.values(LIFE_PATTERNS)
+    .filter((p) => p.category === groupName)
+    .map(makePatternCard)
+  rendered.push(...items)
 
-  const heading = document.createElement('h2')
-  heading.className = 'mb-3 mt-0 text-[1.05rem] font-semibold'
-  heading.textContent = groupName
-
-  const cards = document.createElement('div')
-  cards.className =
-    'grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5'
-
-  for (const pattern of Object.values(LIFE_PATTERNS).filter(
-    (p) => p.category === groupName,
-  )) {
-    const item = makePatternCard(pattern)
-    rendered.push(item)
-    cards.append(item.card)
-  }
-
-  section.append(heading, cards)
-  gallery.append(section)
+  gallery.append(
+    el(
+      'section',
+      { className: 'mb-9' },
+      el('h2', {
+        className: 'mb-3 mt-0 text-[1.05rem] font-semibold',
+        textContent: groupName,
+      }),
+      el(
+        'div',
+        {
+          className:
+            'grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5',
+        },
+        ...items.map((item) => item.card),
+      ),
+    ),
+  )
 }
 
 function tick(now: number): void {

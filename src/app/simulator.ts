@@ -1,6 +1,5 @@
-import { Conway } from '@/conway.ts'
-import { mustGet } from '@/dom.ts'
-import { LIFE_PATTERNS } from '@/life-data.ts'
+import { el, mustGet } from '@conway/dom'
+
 import {
   clamp,
   hydrateBoot,
@@ -8,7 +7,9 @@ import {
   parseRotation,
   type LifeParams,
   writeParams,
-} from '@/params.ts'
+} from '@/app/params.ts'
+import { Conway } from '@/life/conway.ts'
+import { LIFE_PATTERNS } from '@/life/data.ts'
 
 import '@/styles/main.css'
 
@@ -72,11 +73,13 @@ function revealUi(): void {
 const initial = hydrateBoot((id) => Boolean(LIFE_PATTERNS[id]))
 
 for (const [id, pattern] of Object.entries(LIFE_PATTERNS)) {
-  const opt = document.createElement('option')
-  opt.value = id
-  opt.textContent = `${pattern.name} (${pattern.category})`
-  if (id === initial.spawn) opt.selected = true
-  spawnSelect.append(opt)
+  spawnSelect.append(
+    el('option', {
+      value: id,
+      textContent: `${pattern.name} (${pattern.category})`,
+      selected: id === initial.spawn,
+    }),
+  )
 }
 
 seedInput.value = initial.seed

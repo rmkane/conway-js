@@ -18,10 +18,16 @@
     "hooks": "./scripts/install-hooks.sh",
     "precommit": "oxfmt --check && oxlint && vitest run && tsc --noEmit"
   },
+  "dependencies": {
+    "@conway/dom": "workspace:*",
+    "@conway/geom": "workspace:*",
+    "@conway/rng": "workspace:*"
+  },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.2.0",
     "fallow": "^3.14.0",
+    "happy-dom": "^20.11.2",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
     "oxlint-tsgolint": "^7.0.2001",

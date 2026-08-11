@@ -1,0 +1,14 @@
+{
+  "name": "@conway/rng",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic PRNG: FNV-1a hashSeed + mulberry32",
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

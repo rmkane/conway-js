@@ -1,23 +1,29 @@
 import {
+  type AnchorMode,
+  anchorToOrigin,
+  type Offset,
+  type Point,
+  type TransformOptions,
+} from '@conway/geom'
+
+import {
   type AliveSet,
   bbox,
   cloneAlive,
   pack,
   stepAlive,
   unpack,
-} from '@/life.ts'
-import { anchorToOrigin, patternOffsets } from '@/pattern.ts'
-import { randomSoup } from '@/rng.ts'
-import type {
-  AnchorMode,
-  CellCoord,
-  InteractionMode,
-  Offset,
-  PatternTransform,
-  SpawnOptions,
-} from '@/types.ts'
+} from '@/life/cells.ts'
+import { patternOffsets } from '@/life/pattern.ts'
+import { randomSoup } from '@/life/rng.ts'
 
 const HISTORY_LIMIT = 1000
+
+export type InteractionMode = 'inspect' | 'spawn'
+
+export type SpawnOptions = TransformOptions & {
+  anchor?: AnchorMode
+}
 
 export interface ConwayOptions {
   cellSize?: number
@@ -55,7 +61,7 @@ export class Conway {
 
   originX = 0
   originY = 0
-  hoverCell: CellCoord | null = null
+  hoverCell: Point | null = null
   /** Offsets from top-left for spawn ghost. */
   ghostTemplate: Offset[] | null = null
   ghostAnchor: AnchorMode = 'center'
@@ -133,7 +139,7 @@ export class Conway {
   }
 
   /** Set the translucent spawn preview shape (follows the hover cell). */
-  setGhostPattern(rows: string[] | null, options: PatternTransform = {}): void {
+  setGhostPattern(rows: string[] | null, options: TransformOptions = {}): void {
     if (!rows) {
       this.ghostTemplate = null
       this.scheduleRender()
@@ -351,7 +357,7 @@ export class Conway {
     }
   }
 
-  setHoverCell(cell: CellCoord | null): void {
+  setHoverCell(cell: Point | null): void {
     const prev = this.hoverCell
     const same =
       (!prev && !cell) ||
@@ -366,7 +372,7 @@ export class Conway {
   }
 
   /** Top-left world cell currently mapped to canvas (0, 0). */
-  viewOrigin(): CellCoord {
+  viewOrigin(): Point {
     const cssW = this.canvas.clientWidth
     const cssH = this.canvas.clientHeight
     const cols = Math.ceil(cssW / this.cellSize) + 1
@@ -378,7 +384,7 @@ export class Conway {
   }
 
   /** Map a mouse event on the canvas to world cell coordinates. */
-  cellAtEvent(event: MouseEvent): CellCoord | null {
+  cellAtEvent(event: MouseEvent): Point | null {
     const rect = this.canvas.getBoundingClientRect()
     const localX = event.clientX - rect.left
     const localY = event.clientY - rect.top

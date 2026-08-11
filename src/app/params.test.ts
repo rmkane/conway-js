@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { clamp, decodeColor, encodeColor, parseBool } from '@/params.ts'
+import { clamp, decodeColor, encodeColor, parseBool } from '@/app/params.ts'
 
 describe('parseBool', () => {
   it('parses common truthy/falsey query values', () => {

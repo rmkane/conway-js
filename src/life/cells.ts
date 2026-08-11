@@ -1,4 +1,4 @@
-/** Shared B3/S23 helpers used by the canvas engine and about gallery. */
+/** Shared B3/S23 set helpers used by the canvas engine and gallery. */
 
 export type CellKey = string
 export type AliveSet = Set<CellKey>
@@ -10,16 +10,6 @@ export function pack(x: number, y: number): CellKey {
 export function unpack(key: CellKey): [number, number] {
   const i = key.indexOf(',')
   return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
-}
-
-export function parseShapeRows(rows: string[]): AliveSet {
-  const alive: AliveSet = new Set()
-  for (let y = 0; y < rows.length; y++) {
-    for (let x = 0; x < rows[y].length; x++) {
-      if (rows[y][x] === '#') alive.add(pack(x, y))
-    }
-  }
-  return alive
 }
 
 export function cloneAlive(alive: AliveSet): AliveSet {
