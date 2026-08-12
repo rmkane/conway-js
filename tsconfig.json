@@ -20,6 +20,7 @@
       "@/*": ["./src/*"],
       "@conway/dom": ["./packages/dom/src/index.ts"],
       "@conway/geom": ["./packages/geom/src/index.ts"],
+      "@conway/query": ["./packages/query/src/index.ts"],
       "@conway/rng": ["./packages/rng/src/index.ts"]
     }
   },

@@ -2,8 +2,10 @@ import { el, mustGet } from '@conway/dom'
 
 import {
   type AliveSet,
+  bbox,
   homeAlive,
   pack,
+  shiftAlive,
   stepAlive,
   unpack,
 } from '@/life/cells.ts'
@@ -46,10 +48,35 @@ let generationDuration = Number(speedInput.value)
 let generationStartedAt = 0
 
 /** Gallery boards add margin so oscillators/ships can move without clipping. */
-function boardPad(pattern: LifePattern): { x: number; y: number } {
+function boardPad(pattern: LifePattern): {
+  x: number
+  y: number
+  se?: { x: number; y: number }
+} {
   if (pattern.pad) return pattern.pad
   const n = pattern.category === 'Still lifes' ? 1 : 2
   return { x: n, y: n }
+}
+
+/** Board size + seed origin for a gallery card. */
+function boardLayout(
+  pattern: LifePattern,
+  parsed: { cols: number; rows: number; alive: AliveSet },
+): { cols: number; rows: number; alive: AliveSet } {
+  const pad = boardPad(pattern)
+  if (pad.se) {
+    const cols = parsed.cols + pad.x + pad.se.x
+    const rows = parsed.rows + pad.y + pad.se.y
+    const { minX, minY } = bbox(parsed.alive)
+    return {
+      cols,
+      rows,
+      alive: shiftAlive(parsed.alive, pad.x - minX, pad.y - minY),
+    }
+  }
+  const cols = parsed.cols + pad.x * 2
+  const rows = parsed.rows + pad.y * 2
+  return { cols, rows, alive: homeAlive(parsed.alive, cols, rows) }
 }
 
 /** Drop cells that left the visible board (guns emit ships forever). */
@@ -127,17 +154,14 @@ function renderCells(item: GalleryItem): void {
 function makePatternCard(pattern: LifePattern): GalleryItem {
   const parsed = parseShape(pattern.shape)
   const isShip = pattern.category === 'Spaceships'
-  const pad = boardPad(pattern)
-  const cols = parsed.cols + pad.x * 2
-  const rows = parsed.rows + pad.y * 2
-  const alive = homeAlive(parsed.alive, cols, rows)
+  const { cols, rows, alive } = boardLayout(pattern, parsed)
 
   const title = el('h3', {
-    className: 'm-0 text-[0.95rem] font-semibold',
+    className: 'm-0 text-[0.95rem] leading-snug font-semibold',
     textContent: pattern.name,
   })
   const info = el('span', {
-    className: 'whitespace-nowrap text-xs text-zinc-500 dark:text-zinc-400',
+    className: 'text-xs text-zinc-500 dark:text-zinc-400',
     textContent:
       pattern.period === 1
         ? 'still · shape only'
@@ -145,7 +169,8 @@ function makePatternCard(pattern: LifePattern): GalleryItem {
   })
   const header = el(
     'div',
-    { className: 'mb-3.5 flex items-baseline justify-between gap-3' },
+    // Reserve two title lines so card chrome matches within a category.
+    { className: 'mb-2 flex min-h-11 flex-col gap-0.5' },
     title,
     info,
   )
@@ -164,14 +189,15 @@ function makePatternCard(pattern: LifePattern): GalleryItem {
     },
     inner,
   )
+  const stage = el('div', { className: 'gallery-board-stage' }, board)
   const card = el(
     'article',
     {
       className:
-        'min-h-[180px] rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3.5 shadow-sm',
+        'flex h-full flex-col overflow-x-auto rounded-[10px] border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900',
     },
     header,
-    board,
+    stage,
   )
 
   const item: GalleryItem = {
@@ -209,6 +235,12 @@ for (const groupName of groups) {
     .map(makePatternCard)
   rendered.push(...items)
 
+  const maxRows = Math.max(1, ...items.map((item) => item.rows))
+  const maxCols = Math.max(1, ...items.map((item) => item.cols))
+  // Match .life-board --cell-size (7px) plus card padding so wide boards
+  // (guns) are not clipped by a narrow auto-fill track.
+  const minTrackPx = Math.max(200, maxCols * 7 + 24)
+
   gallery.append(
     el(
       'section',
@@ -220,8 +252,11 @@ for (const groupName of groups) {
       el(
         'div',
         {
-          className:
-            'grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5',
+          className: 'grid gap-3',
+          style: {
+            '--group-board-rows': String(maxRows),
+            'grid-template-columns': `repeat(auto-fill, minmax(min(100%, ${minTrackPx}px), 1fr))`,
+          },
         },
         ...items.map((item) => item.card),
       ),

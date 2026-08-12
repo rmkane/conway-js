@@ -1,0 +1,14 @@
+{
+  "name": "@conway/query",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generic URL query codecs and search-param helpers (no app deps)",
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

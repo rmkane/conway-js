@@ -14,6 +14,9 @@ importers:
       '@conway/geom':
         specifier: workspace:*
         version: link:packages/geom
+      '@conway/query':
+        specifier: workspace:*
+        version: link:packages/query
       '@conway/rng':
         specifier: workspace:*
         version: link:packages/rng
@@ -55,6 +58,8 @@ importers:
   packages/dom: {}
 
   packages/geom: {}
+
+  packages/query: {}
 
   packages/rng: {}
 

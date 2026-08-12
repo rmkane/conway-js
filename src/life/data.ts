@@ -16,10 +16,11 @@ export interface LifePattern {
   /** Cell displacement per period for spaceships: [dx, dy]. */
   velocity?: readonly [number, number]
   /**
-   * Extra empty cells around the shape on the about-page gallery board.
-   * Use when the pattern expands beyond its seed bbox (e.g. penta-decathlon).
+   * Extra empty cells on the about-page gallery board.
+   * Symmetric `x`/`y` margins when `se` is omitted; with `se`, the seed is
+   * parked at top-left (+x/+y) and `se` is southeast runway (guns).
    */
-  pad?: { x: number; y: number }
+  pad?: { x: number; y: number; se?: { x: number; y: number } }
 }
 
 export const LIFE_PATTERNS: Record<string, LifePattern> = {
@@ -146,8 +147,7 @@ export const LIFE_PATTERNS: Record<string, LifePattern> = {
     name: "Gosper's glider gun",
     category: 'Guns',
     period: 30,
-    // Room for a few SE-bound gliders on the gallery board.
-    pad: { x: 14, y: 14 },
+    pad: { x: 2, y: 2, se: { x: 6, y: 12 } },
     shape: [
       '........................#...........',
       '......................#.#...........',

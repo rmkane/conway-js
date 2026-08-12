@@ -68,7 +68,7 @@ export class Conway {
   /** Offsets from top-left for spawn ghost. */
   ghostTemplate: Offset[] | null = null
   ghostAnchor: AnchorMode = 'center'
-  mode: InteractionMode = 'spawn'
+  mode: InteractionMode = 'inspect'
 
   private _renderQueued = false
   private _onChange: ((game: Conway) => void) | null = null
@@ -83,7 +83,7 @@ export class Conway {
     this.cellSize = options.cellSize ?? 8
     this.foreground = options.foreground ?? '#111111'
     this.background = options.background ?? '#ffffff'
-    this.showGrid = options.showGrid ?? true
+    this.showGrid = options.showGrid ?? false
   }
 
   onChange(fn: (game: Conway) => void): void {
@@ -309,8 +309,8 @@ export class Conway {
     }
   }
 
-  /** Map a mouse event on the canvas to world cell coordinates. */
-  cellAtEvent(event: MouseEvent): Point | null {
+  /** Map client coordinates on the canvas to world cell coordinates. */
+  cellAtEvent(event: Pick<MouseEvent, 'clientX' | 'clientY'>): Point | null {
     const rect = this.canvas.getBoundingClientRect()
     const localX = event.clientX - rect.left
     const localY = event.clientY - rect.top

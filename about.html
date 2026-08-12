@@ -19,39 +19,39 @@
     />
   </head>
   <body
-    class="min-h-screen bg-zinc-100 p-6 font-sans text-zinc-900 antialiased max-[560px]:p-4 dark:bg-zinc-950 dark:text-zinc-100"
+    class="flex min-h-dvh flex-col bg-zinc-100 font-sans text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100"
   >
-    <header class="mb-7 flex flex-wrap items-end justify-between gap-6">
-      <div>
-        <h1 class="m-0 mb-1.5 text-[1.4rem] font-bold tracking-tight">
-          Pattern gallery
-        </h1>
-        <p class="m-0 max-w-[52ch] text-zinc-500 dark:text-zinc-400">
-          Classic Life patterns evolved from a seed with B3/S23. Spaceships keep
-          a treadmill grid scroll so travel direction stays clear. Guns emit
-          gliders across a padded board.
-        </p>
-      </div>
-
-      <nav class="flex flex-wrap items-center gap-3" aria-label="Gallery">
+    <header
+      class="flex shrink-0 items-center justify-between gap-4 border-b border-zinc-200 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <h1 class="m-0 text-lg font-bold tracking-tight">
+        <a
+          href="./"
+          class="text-inherit no-underline hover:opacity-80"
+          title="Home"
+          >Conway's Game of Life</a
+        >
+      </h1>
+      <nav class="flex items-center gap-3.5 text-sm" aria-label="Primary">
         <a
           id="sim-link"
-          class="text-sm text-blue-600 underline decoration-1 underline-offset-2 hover:no-underline dark:text-blue-400"
+          class="text-blue-600 underline decoration-1 underline-offset-2 hover:no-underline dark:text-blue-400"
           href="./index.html"
           title="Open the Life simulator"
-          >Open simulator</a
+          >Simulator</a
         >
         <a
-          class="inline-flex items-center gap-1.5 text-sm text-blue-600 underline decoration-1 underline-offset-2 hover:no-underline dark:text-blue-400"
+          class="inline-flex items-center text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
           href="https://github.com/rmkane/conway-js"
           title="View source on GitHub"
+          aria-label="View source on GitHub"
           target="_blank"
           rel="noopener noreferrer"
         >
           <svg
-            class="size-4 shrink-0 fill-current"
-            width="16"
-            height="16"
+            class="size-5 shrink-0 fill-current"
+            width="20"
+            height="20"
             viewBox="0 0 16 16"
             aria-hidden="true"
             focusable="false"
@@ -62,46 +62,83 @@
               d="M8 0C3.58 0 0 3.58 0 8C0 11.54 2.29 14.53 5.47 15.59C5.87 15.66 6.02 15.42 6.02 15.21C6.02 15.02 6.01 14.39 6.01 13.72C4 14.09 3.48 13.23 3.32 12.78C3.23 12.55 2.84 11.84 2.5 11.65C2.22 11.5 1.82 11.13 2.49 11.12C3.12 11.11 3.57 11.7 3.72 11.94C4.44 13.15 5.59 12.81 6.05 12.6C6.12 12.08 6.33 11.73 6.56 11.53C4.78 11.33 2.92 10.64 2.92 7.58C2.92 6.71 3.23 5.99 3.74 5.43C3.66 5.23 3.38 4.41 3.82 3.31C3.82 3.31 4.49 3.1 6.02 4.13C6.66 3.95 7.34 3.86 8.02 3.86C8.7 3.86 9.38 3.95 10.02 4.13C11.55 3.09 12.22 3.31 12.22 3.31C12.66 4.41 12.38 5.23 12.3 5.43C12.81 5.99 13.12 6.7 13.12 7.58C13.12 10.65 11.25 11.33 9.47 11.53C9.76 11.78 10.01 12.26 10.01 13.01C10.01 14.08 10 14.94 10 15.21C10 15.42 10.15 15.67 10.55 15.59C13.71 14.53 16 11.53 16 8C16 3.58 12.42 0 8 0Z"
             />
           </svg>
-          View on GitHub
         </a>
-        <div
-          class="flex flex-wrap items-center gap-2.5"
-          role="group"
-          aria-label="Gallery playback"
-        >
-          <button
-            id="toggle"
-            type="button"
-            title="Pause gallery animation"
-            aria-label="Pause gallery animation"
-            aria-pressed="true"
-            class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-          >
-            Pause
-          </button>
-          <label
-            for="speed"
-            class="flex items-center gap-2 text-sm whitespace-nowrap text-zinc-500 dark:text-zinc-400"
-          >
-            Frame time
-            <input
-              id="speed"
-              type="range"
-              min="80"
-              max="1200"
-              step="20"
-              value="350"
-              class="w-35"
-              title="Milliseconds per gallery generation"
-              aria-describedby="speed-label"
-            />
-            <span id="speed-label"></span>
-          </label>
-        </div>
       </nav>
     </header>
 
-    <main id="gallery" aria-label="Pattern gallery"></main>
+    <div
+      class="flex shrink-0 flex-wrap items-center justify-center gap-3 border-b border-zinc-200 bg-white px-5 py-2 dark:border-zinc-800 dark:bg-zinc-900"
+      role="group"
+      aria-label="Gallery playback"
+    >
+      <button
+        id="toggle"
+        type="button"
+        title="Pause gallery animation"
+        aria-label="Pause gallery animation"
+        aria-pressed="true"
+        class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+      >
+        Pause
+      </button>
+      <label
+        for="speed"
+        class="flex items-center gap-2 text-sm whitespace-nowrap text-zinc-500 dark:text-zinc-400"
+      >
+        Frame time
+        <input
+          id="speed"
+          type="range"
+          min="80"
+          max="1200"
+          step="20"
+          value="350"
+          class="w-35"
+          title="Milliseconds per gallery generation"
+          aria-describedby="speed-label"
+        />
+        <span id="speed-label"></span>
+      </label>
+    </div>
+
+    <div class="mx-auto w-full max-w-6xl flex-1 px-6 py-7 max-[560px]:px-4">
+      <div class="mb-7">
+        <h2 class="m-0 mb-1.5 text-[1.4rem] font-bold tracking-tight">
+          Pattern gallery
+        </h2>
+        <p class="m-0 max-w-[52ch] text-zinc-500 dark:text-zinc-400">
+          Classic Life patterns evolved from a seed with B3/S23. Spaceships keep
+          a treadmill grid scroll so travel direction stays clear. Guns emit
+          gliders across a padded board.
+        </p>
+      </div>
+
+      <main id="gallery" aria-label="Pattern gallery"></main>
+    </div>
+
+    <footer
+      class="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
+    >
+      <span>© 2026 rmkane</span>
+      <span aria-hidden="true">·</span>
+      <a
+        class="text-blue-600 underline decoration-1 underline-offset-2 hover:no-underline dark:text-blue-400"
+        href="https://github.com/rmkane/conway-js/blob/main/LICENSE"
+        title="View the MIT License"
+        target="_blank"
+        rel="noopener noreferrer"
+        >MIT License</a
+      >
+      <span aria-hidden="true">·</span>
+      <a
+        class="text-blue-600 underline decoration-1 underline-offset-2 hover:no-underline dark:text-blue-400"
+        href="https://github.com/rmkane/conway-js"
+        title="View source on GitHub"
+        target="_blank"
+        rel="noopener noreferrer"
+        >GitHub</a
+      >
+    </footer>
 
     <script type="module" src="/src/app/gallery.ts"></script>
   </body>

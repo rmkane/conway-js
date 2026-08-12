@@ -1,11 +1,10 @@
 import { el, mustGet } from '@conway/dom'
+import { clamp, newSeedValue } from '@conway/query'
 
 import {
-  clamp,
   hydrateBoot,
-  newSeedValue,
-  parseRotation,
   type LifeParams,
+  parseRotation,
   writeParams,
 } from '@/app/params.ts'
 import { Conway } from '@/life/conway.ts'
@@ -23,6 +22,7 @@ const fgInput = mustGet('#fg', HTMLInputElement)
 const bgInput = mustGet('#bg', HTMLInputElement)
 const gridInput = mustGet('#grid', HTMLInputElement)
 const modeSelect = mustGet('#mode', HTMLSelectElement)
+const spawnFields = mustGet('#spawn-fields', HTMLFieldSetElement)
 const spawnSelect = mustGet('#spawn', HTMLSelectElement)
 const spawnRotSelect = mustGet('#spawn-rot', HTMLSelectElement)
 const spawnAnchorSelect = mustGet('#spawn-anchor', HTMLSelectElement)
@@ -38,6 +38,7 @@ const speedInput = mustGet('#speed', HTMLInputElement)
 const speedLabel = mustGet('#speed-label', HTMLElement)
 const statusGen = mustGet('#status-gen', HTMLElement)
 const statusPop = mustGet('#status-pop', HTMLElement)
+const statusPopTrend = mustGet('#status-pop-trend', HTMLElement)
 const statusCursor = mustGet('#status-cursor', HTMLElement)
 const statusPattern = mustGet('#status-pattern', HTMLElement)
 const statusState = mustGet('#status-state', HTMLElement)
@@ -117,6 +118,7 @@ function syncModeUi(): void {
   game.setMode(mode)
   canvas.style.cursor = mode === 'spawn' ? 'crosshair' : 'default'
   form.dataset.mode = mode
+  spawnFields.disabled = mode !== 'spawn'
 }
 
 function syncGhost(): void {
@@ -163,12 +165,44 @@ function syncPlayUi(running: boolean): void {
 }
 
 function syncPatternStatus(): void {
-  statusPattern.textContent = game.hoverMatch?.name ?? '—'
+  const name = game.hoverMatch?.name ?? '—'
+  statusPattern.textContent = name
+  statusPattern.title = game.hoverMatch?.name ?? ''
+}
+
+let lastPopulation: number | null = null
+
+function syncPopTrend(population: number): void {
+  const prev = lastPopulation
+  lastPopulation = population
+  statusPopTrend.classList.remove(
+    'text-emerald-600',
+    'text-red-600',
+    'dark:text-emerald-400',
+    'dark:text-red-400',
+    'text-zinc-400',
+  )
+  if (prev == null || population === prev) {
+    statusPopTrend.textContent = '–'
+    statusPopTrend.classList.add('text-zinc-400')
+    statusPopTrend.setAttribute('aria-label', 'population unchanged')
+    return
+  }
+  if (population > prev) {
+    statusPopTrend.textContent = '▲'
+    statusPopTrend.classList.add('text-emerald-600', 'dark:text-emerald-400')
+    statusPopTrend.setAttribute('aria-label', 'population up')
+    return
+  }
+  statusPopTrend.textContent = '▼'
+  statusPopTrend.classList.add('text-red-600', 'dark:text-red-400')
+  statusPopTrend.setAttribute('aria-label', 'population down')
 }
 
 function syncStatus(): void {
   statusGen.textContent = String(game.generation)
   statusPop.textContent = String(game.population)
+  syncPopTrend(game.population)
   syncPatternStatus()
   syncPlayUi(game.running)
 }
@@ -214,10 +248,36 @@ seedRandomBtn.addEventListener('click', () => {
   applyFormToGame({ resetSeed: true })
 })
 
-zoomInput.addEventListener('input', () => {
+let pointerClient: { x: number; y: number } | null = null
+
+function syncHoverFromClient(clientX: number, clientY: number): void {
+  const cell = game.cellAtEvent({ clientX, clientY })
+  setCursorStatus(cell)
+  game.setHoverCell(cell)
+  syncPatternStatus()
+}
+
+function applyZoom(cellSize: number): void {
+  zoomInput.value = String(clamp(cellSize, 2, 48))
   zoomLabel.textContent = `${zoomInput.value}px`
   applyFormToGame()
+  if (pointerClient) syncHoverFromClient(pointerClient.x, pointerClient.y)
+}
+
+zoomInput.addEventListener('input', () => {
+  applyZoom(Number(zoomInput.value))
 })
+
+canvas.addEventListener(
+  'wheel',
+  (event) => {
+    event.preventDefault()
+    pointerClient = { x: event.clientX, y: event.clientY }
+    const step = event.deltaY > 0 ? -1 : 1
+    applyZoom(Number(zoomInput.value) + step)
+  },
+  { passive: false },
+)
 
 fgInput.addEventListener('input', () => applyFormToGame())
 bgInput.addEventListener('input', () => applyFormToGame())
@@ -265,13 +325,12 @@ function setCursorStatus(cell: { x: number; y: number } | null): void {
 }
 
 canvas.addEventListener('mousemove', (event) => {
-  const cell = game.cellAtEvent(event)
-  setCursorStatus(cell)
-  game.setHoverCell(cell)
-  syncPatternStatus()
+  pointerClient = { x: event.clientX, y: event.clientY }
+  syncHoverFromClient(event.clientX, event.clientY)
 })
 
 canvas.addEventListener('mouseleave', () => {
+  pointerClient = null
   setCursorStatus(null)
   game.setHoverCell(null)
   syncPatternStatus()

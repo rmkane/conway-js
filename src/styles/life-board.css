@@ -12,6 +12,15 @@
   background-size: var(--cell-size) var(--cell-size);
 }
 
+/* Shared stage height within a gallery category (--group-board-rows). */
+.gallery-board-stage {
+  --cell-size: 7px;
+  display: flex;
+  min-height: calc(var(--group-board-rows) * var(--cell-size));
+  align-items: center;
+  justify-content: center;
+}
+
 @media (prefers-color-scheme: dark) {
   .life-board {
     --grid-line: #3a4048;
@@ -43,7 +52,8 @@
 }
 
 @media (max-width: 560px) {
-  .life-board {
+  .life-board,
+  .gallery-board-stage {
     --cell-size: 6px;
   }
 }

@@ -65,7 +65,7 @@ export function bbox(alive: AliveSet): {
   return { minX, minY, maxX, maxY }
 }
 
-function shiftAlive(alive: AliveSet, dx: number, dy: number): AliveSet {
+export function shiftAlive(alive: AliveSet, dx: number, dy: number): AliveSet {
   if (dx === 0 && dy === 0) return alive
   const next: AliveSet = new Set()
   for (const key of alive) {

@@ -42,6 +42,7 @@
   "dependencies": {
     "@conway/dom": "workspace:*",
     "@conway/geom": "workspace:*",
+    "@conway/query": "workspace:*",
     "@conway/rng": "workspace:*"
   },
   "devDependencies": {

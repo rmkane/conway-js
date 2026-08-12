@@ -1,7 +1,23 @@
 import type { AnchorMode, Rotation } from '@conway/geom'
+import {
+  clamp,
+  currentSearchParams,
+  decodeColor,
+  encodeColor,
+  getBool,
+  getNumber,
+  getOneOf,
+  getString,
+  newSeedValue,
+  oneOf,
+  parseBool,
+  replaceSearch,
+  setBool,
+} from '@conway/query'
 
 import type { InteractionMode } from '@/life/conway.ts'
 
+/** Canonical simulator state mirrored in the URL search string. */
 export interface LifeParams {
   seed: string
   zoom: number
@@ -16,50 +32,19 @@ export interface LifeParams {
   flipY: boolean
 }
 
+const MODES = ['inspect', 'spawn'] as const
+const ANCHORS = ['center', 'corner'] as const
+const ROTATIONS: readonly Rotation[] = [0, 90, 180, 270]
+
 const DEFAULTS = {
   zoom: 12,
-  grid: true,
-  mode: 'spawn' as InteractionMode,
+  grid: false,
+  mode: 'inspect' as InteractionMode,
   spawn: 'glider',
   rot: 0 as Rotation,
   anchor: 'center' as AnchorMode,
   flipX: false,
   flipY: false,
-}
-
-export function parseBool(
-  value: string | null | undefined,
-  fallback: boolean,
-): boolean {
-  if (value === null || value === undefined || value === '') return fallback
-  if (value === '1' || value === 'true' || value === 'on') return true
-  if (value === '0' || value === 'false' || value === 'off') return false
-  return fallback
-}
-
-export function clamp(n: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, n))
-}
-
-export function newSeedValue(): string {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return String(Math.floor(Math.random() * 1e15))
-}
-
-/** Store colors without `#` so the fragment delimiter cannot truncate the query. */
-export function encodeColor(value: string): string {
-  return (value || '').replace(/^#/, '').toLowerCase()
-}
-
-export function decodeColor(
-  value: string | null | undefined,
-  fallback: string,
-): string {
-  if (!value) return fallback
-  const hex = value.startsWith('#') ? value : `#${value}`
-  return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex.toLowerCase() : fallback
 }
 
 function systemColors(): { fg: string; bg: string } {
@@ -69,20 +54,20 @@ function systemColors(): { fg: string; bg: string } {
     : { fg: '#111111', bg: '#ffffff' }
 }
 
-function parseMode(
-  value: string | null,
-  params: URLSearchParams,
-): InteractionMode {
-  if (value === 'inspect' || value === 'spawn') return value
-  if (params.has('click'))
+/** Legacy `click=1|0` maps to spawn/inspect when `mode` is absent. */
+function parseMode(params: URLSearchParams): InteractionMode {
+  if (params.has('mode')) return getOneOf(params, 'mode', MODES, DEFAULTS.mode)
+  if (params.has('click')) {
     return parseBool(params.get('click'), true) ? 'spawn' : 'inspect'
+  }
   return DEFAULTS.mode
 }
 
 export function parseRotation(value: number): Rotation {
-  return value === 0 || value === 90 || value === 180 || value === 270
-    ? value
-    : DEFAULTS.rot
+  for (const rot of ROTATIONS) {
+    if (rot === value) return rot
+  }
+  return DEFAULTS.rot
 }
 
 function parseBootParams(validSpawn: (id: string) => boolean): LifeParams {
@@ -92,33 +77,30 @@ function parseBootParams(validSpawn: (id: string) => boolean): LifeParams {
     ...boot,
     fg: decodeColor(boot.fg, sys.fg),
     bg: decodeColor(boot.bg, sys.bg),
-    mode: boot.mode === 'inspect' ? 'inspect' : 'spawn',
+    mode: oneOf(boot.mode, MODES, DEFAULTS.mode),
     spawn: validSpawn(boot.spawn) ? boot.spawn : DEFAULTS.spawn,
     rot: parseRotation(boot.rot),
-    anchor: boot.anchor === 'corner' ? 'corner' : 'center',
+    anchor: oneOf(boot.anchor, ANCHORS, DEFAULTS.anchor),
   }
 }
 
 function parseUrlParams(validSpawn: (id: string) => boolean): LifeParams {
-  const params = new URLSearchParams(location.search)
+  const params = currentSearchParams()
   const sys = systemColors()
-  const spawnKey = params.get('spawn') || DEFAULTS.spawn
-  const zoomRaw = Number(params.get('zoom') ?? DEFAULTS.zoom)
-  const zoom = clamp(Number.isFinite(zoomRaw) ? zoomRaw : DEFAULTS.zoom, 2, 48)
-  const rot = Number(params.get('rot') ?? DEFAULTS.rot)
+  const spawnKey = getString(params, 'spawn', DEFAULTS.spawn)
 
   return {
     seed: params.get('seed') || newSeedValue(),
-    zoom,
+    zoom: clamp(getNumber(params, 'zoom', DEFAULTS.zoom), 2, 48),
     fg: decodeColor(params.get('fg'), sys.fg),
     bg: decodeColor(params.get('bg'), sys.bg),
-    grid: parseBool(params.get('grid'), DEFAULTS.grid),
-    mode: parseMode(params.get('mode'), params),
+    grid: getBool(params, 'grid', DEFAULTS.grid),
+    mode: parseMode(params),
     spawn: validSpawn(spawnKey) ? spawnKey : DEFAULTS.spawn,
-    rot: parseRotation(rot),
-    anchor: params.get('anchor') === 'corner' ? 'corner' : DEFAULTS.anchor,
-    flipX: parseBool(params.get('flipX'), DEFAULTS.flipX),
-    flipY: parseBool(params.get('flipY'), DEFAULTS.flipY),
+    rot: parseRotation(getNumber(params, 'rot', DEFAULTS.rot)),
+    anchor: getOneOf(params, 'anchor', ANCHORS, DEFAULTS.anchor),
+    flipX: getBool(params, 'flipX', DEFAULTS.flipX),
+    flipY: getBool(params, 'flipY', DEFAULTS.flipY),
   }
 }
 
@@ -128,6 +110,7 @@ function parseParams(validSpawn: (id: string) => boolean): LifeParams {
     : parseUrlParams(validSpawn)
 }
 
+/** Serialize simulator state into `location` (and optionally an about-page link). */
 export function writeParams(
   state: LifeParams,
   aboutLink: HTMLAnchorElement | null,
@@ -137,15 +120,14 @@ export function writeParams(
   params.set('zoom', String(state.zoom))
   params.set('fg', encodeColor(state.fg))
   params.set('bg', encodeColor(state.bg))
-  params.set('grid', state.grid ? '1' : '0')
+  setBool(params, 'grid', state.grid)
   params.set('mode', state.mode)
   params.set('spawn', state.spawn)
   params.set('rot', String(state.rot))
   params.set('anchor', state.anchor)
-  params.set('flipX', state.flipX ? '1' : '0')
-  params.set('flipY', state.flipY ? '1' : '0')
-  const search = `?${params.toString()}`
-  history.replaceState(null, '', `${location.pathname}${search}`)
+  setBool(params, 'flipX', state.flipX)
+  setBool(params, 'flipY', state.flipY)
+  const search = replaceSearch(params)
 
   if (aboutLink) aboutLink.href = `./about.html${search}`
 }
@@ -156,4 +138,10 @@ export function hydrateBoot(validSpawn: (id: string) => boolean): LifeParams {
   writeParams(boot, null)
   window.__LIFE_BOOT__ = boot
   return boot
+}
+
+declare global {
+  interface Window {
+    __LIFE_BOOT__?: LifeParams
+  }
 }

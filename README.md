@@ -42,12 +42,13 @@ Makefile                   Dev / quality targets
 packages/
   dom/                     @conway/dom — el() + mustGet() (no deps)
   geom/                    @conway/geom — discrete 2D geometry
+  query/                   @conway/query — generic URL query helpers (no app deps)
   rng/                     @conway/rng — hashSeed + mulberry32 (no deps)
 src/
-  app/                     Page entrypoints + URL params
+  app/                     Page entrypoints + simulator URL glue
     simulator.ts
     gallery.ts
-    params.ts
+    params.ts              LifeParams ↔ @conway/query
   life/                    Domain: cells, shapes, engine
     cells.ts               B3/S23 set helpers
     shape.ts               #/. shape parser
