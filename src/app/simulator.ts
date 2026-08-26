@@ -1,6 +1,7 @@
 import { el, mustGet } from '@conway/dom'
 import { clamp, newSeedValue } from '@conway/query'
 
+import { glyphs, setButtonIcon } from '@/app/icon.ts'
 import {
   hydrateBoot,
   type LifeParams,
@@ -48,6 +49,13 @@ const statusPopTrend = mustGet('#status-pop-trend', HTMLElement)
 const statusCursor = mustGet('#status-cursor', HTMLElement)
 const statusPattern = mustGet('#status-pattern', HTMLElement)
 const statusState = mustGet('#status-state', HTMLElement)
+
+setButtonIcon(resetBtn, glyphs.reset)
+setButtonIcon(clearBtn, glyphs.clear)
+setButtonIcon(centerBtn, glyphs.center)
+setButtonIcon(prevBtn, glyphs.prev)
+setButtonIcon(nextBtn, glyphs.next)
+setButtonIcon(seedRandomBtn, glyphs.seed)
 
 function readMode(): LifeParams['mode'] {
   return modeSelect.value === 'inspect' ? 'inspect' : 'spawn'
@@ -159,18 +167,17 @@ revealUi()
 
 function runningLabels(running: boolean): {
   state: string
-  play: string
   pressed: string
 } {
-  if (running) return { state: 'running', play: 'Pause', pressed: 'true' }
-  return { state: 'paused', play: 'Play', pressed: 'false' }
+  if (running) return { state: 'running', pressed: 'true' }
+  return { state: 'paused', pressed: 'false' }
 }
 
 function syncPlayUi(running: boolean): void {
   const labels = runningLabels(running)
   const action = running ? 'Pause simulation' : 'Play simulation'
   statusState.textContent = labels.state
-  playBtn.textContent = labels.play
+  setButtonIcon(playBtn, running ? glyphs.pause : glyphs.play)
   playBtn.title = action
   playBtn.setAttribute('aria-label', action)
   playBtn.setAttribute('aria-pressed', labels.pressed)
