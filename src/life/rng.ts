@@ -1,3 +1,4 @@
+import { floor, scale, vec } from '@conway/geom'
 import { hashSeed, mulberry32 } from '@conway/rng'
 
 import { type AliveSet, pack } from '@/life/cells.ts'
@@ -18,12 +19,11 @@ export function randomSoup(
   const density = options.density ?? 0.22
   const rand = mulberry32(hashSeed(seedKey))
   const alive: AliveSet = new Set()
-  const ox = -Math.floor(width / 2)
-  const oy = -Math.floor(height / 2)
+  const origin = floor(scale(vec(width, height), -0.5))
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (rand() < density) alive.add(pack(ox + x, oy + y))
+      if (rand() < density) alive.add(pack(origin.x + x, origin.y + y))
     }
   }
 

@@ -5,26 +5,26 @@ import { patternOffsets } from '@/life/pattern.ts'
 describe('patternOffsets', () => {
   it('normalizes seed cells to top-left origin', () => {
     expect(patternOffsets(['.#.', '###'])).toEqual([
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [2, 1],
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
     ])
   })
 
   it('applies rotation before returning offsets', () => {
     expect(patternOffsets(['##', '.#'], { rotation: 90 })).toEqual([
-      [1, 0],
-      [1, 1],
-      [0, 1],
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
     ])
   })
 
   it('applies flips after rotation', () => {
     expect(patternOffsets(['##', '.#'], { flipX: true })).toEqual([
-      [1, 0],
-      [0, 0],
-      [0, 1],
+      { x: 1, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0, y: 1 },
     ])
   })
 })

@@ -1,23 +1,31 @@
 import {
   type AnchorMode,
+  add,
   anchorToOrigin,
-  type Offset,
+  boundsFrom,
+  boundsOf,
+  contains,
+  overlaps,
   type Point,
+  scale,
+  sizeOf,
+  sub,
+  vec,
+  viewBounds,
+  ZERO,
 } from '@conway/geom'
 
 import type { Camera } from '@/life/camera.ts'
-import { type AliveSet, pack, unpack } from '@/life/cells.ts'
+import { type AliveSet, packPoint, unpack } from '@/life/cells.ts'
 import type { PatternHit } from '@/life/identify.ts'
-import { viewBounds } from '@/life/view.ts'
 
 type PaintView = {
-  cssW: number
-  cssH: number
+  css: Point
   cellSize: number
   cols: number
   rows: number
-  ox: number
-  oy: number
+  /** World point mapped to canvas (0, 0). */
+  origin: Point
 }
 
 /** One frame: scene content + camera + interaction overlays. */
@@ -33,32 +41,39 @@ export type PaintFrame = {
   mode: 'inspect' | 'spawn'
   hoverCell: Point | null
   hoverMatch: PatternHit | null
-  ghostTemplate: Offset[] | null
+  ghostTemplate: Point[] | null
   ghostAnchor: AnchorMode
 }
 
-function cellOffscreen(
-  sx: number,
-  sy: number,
-  cellSize: number,
-  cssW: number,
-  cssH: number,
-): boolean {
-  return sx + cellSize < 0 || sy + cellSize < 0 || sx > cssW || sy > cssH
+function worldToScreen(view: PaintView, world: Point): Point {
+  return scale(sub(world, view.origin), view.cellSize)
+}
+
+function cellScreenBounds(view: PaintView, world: Point) {
+  return boundsFrom(
+    worldToScreen(view, world),
+    vec(view.cellSize, view.cellSize),
+  )
+}
+
+function canvasBounds(view: PaintView) {
+  return boundsFrom(ZERO, view.css)
+}
+
+function cellOffscreen(view: PaintView, world: Point): boolean {
+  return !overlaps(cellScreenBounds(view, world), canvasBounds(view))
 }
 
 function paintCellRect(
   ctx: CanvasRenderingContext2D,
   view: PaintView,
-  worldX: number,
-  worldY: number,
+  world: Point,
 ): void {
-  const { cssW, cssH, cellSize, ox, oy } = view
-  const sx = (worldX - ox) * cellSize
-  const sy = (worldY - oy) * cellSize
-  if (cellOffscreen(sx, sy, cellSize, cssW, cssH)) return
-  ctx.fillRect(sx, sy, cellSize, cellSize)
-  ctx.strokeRect(sx + 0.5, sy + 0.5, cellSize - 1, cellSize - 1)
+  if (cellOffscreen(view, world)) return
+  const screen = worldToScreen(view, world)
+  const { cellSize } = view
+  ctx.fillRect(screen.x, screen.y, cellSize, cellSize)
+  ctx.strokeRect(screen.x + 0.5, screen.y + 0.5, cellSize - 1, cellSize - 1)
 }
 
 function bgLuma(background: string): number | null {
@@ -85,34 +100,32 @@ function originColor(background: string): string {
 function paintOrigin(frame: PaintFrame, view: PaintView): void {
   if (!frame.showOrigin) return
   const { ctx } = frame
-  const { cssW, cssH, cellSize, ox, oy } = view
-  // World (0, 0) in continuous canvas space.
-  const sx = (0 - ox) * cellSize
-  const sy = (0 - oy) * cellSize
+  const { css, cellSize } = view
+  const screen = worldToScreen(view, ZERO)
   const color = originColor(frame.background)
   const arm = Math.max(6, cellSize * 0.75)
+  const hitBounds = boundsFrom(vec(-arm, -arm), add(css, vec(2 * arm, 2 * arm)))
 
   ctx.save()
   ctx.strokeStyle = color
   ctx.lineWidth = Math.max(1, Math.min(2, cellSize / 8))
   ctx.beginPath()
-  ctx.moveTo(0, sy + 0.5)
-  ctx.lineTo(cssW, sy + 0.5)
-  ctx.moveTo(sx + 0.5, 0)
-  ctx.lineTo(sx + 0.5, cssH)
+  ctx.moveTo(0, screen.y + 0.5)
+  ctx.lineTo(css.x, screen.y + 0.5)
+  ctx.moveTo(screen.x + 0.5, 0)
+  ctx.lineTo(screen.x + 0.5, css.y)
   ctx.stroke()
 
-  // Small crosshair tick at the origin so it reads even when axes are off-screen.
-  if (sx >= -arm && sx <= cssW + arm && sy >= -arm && sy <= cssH + arm) {
+  if (contains(hitBounds, screen)) {
     ctx.beginPath()
-    ctx.moveTo(sx - arm, sy + 0.5)
-    ctx.lineTo(sx + arm, sy + 0.5)
-    ctx.moveTo(sx + 0.5, sy - arm)
-    ctx.lineTo(sx + 0.5, sy + arm)
+    ctx.moveTo(screen.x - arm, screen.y + 0.5)
+    ctx.lineTo(screen.x + arm, screen.y + 0.5)
+    ctx.moveTo(screen.x + 0.5, screen.y - arm)
+    ctx.lineTo(screen.x + 0.5, screen.y + arm)
     ctx.stroke()
     ctx.fillStyle = color
     ctx.beginPath()
-    ctx.arc(sx, sy, Math.max(1.5, cellSize / 10), 0, Math.PI * 2)
+    ctx.arc(screen.x, screen.y, Math.max(1.5, cellSize / 10), 0, Math.PI * 2)
     ctx.fill()
   }
   ctx.restore()
@@ -121,12 +134,12 @@ function paintOrigin(frame: PaintFrame, view: PaintView): void {
 function beginFrame(frame: PaintFrame): PaintView | null {
   const { canvas, ctx, camera } = frame
   const dpr = window.devicePixelRatio || 1
-  const cssW = canvas.clientWidth
-  const cssH = canvas.clientHeight
-  if (cssW < 1 || cssH < 1) return null
+  const css = vec(canvas.clientWidth, canvas.clientHeight)
+  if (css.x < 1 || css.y < 1) return null
 
-  const pixelW = Math.floor(cssW * dpr)
-  const pixelH = Math.floor(cssH * dpr)
+  const pixel = scale(css, dpr)
+  const pixelW = Math.floor(pixel.x)
+  const pixelH = Math.floor(pixel.y)
   if (canvas.width !== pixelW || canvas.height !== pixelH) {
     canvas.width = pixelW
     canvas.height = pixelH
@@ -134,29 +147,22 @@ function beginFrame(frame: PaintFrame): PaintView | null {
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   ctx.fillStyle = frame.background
-  ctx.fillRect(0, 0, cssW, cssH)
+  ctx.fillRect(0, 0, css.x, css.y)
 
-  const {
-    cols,
-    rows,
-    minX: ox,
-    minY: oy,
-  } = viewBounds(camera.originX, camera.originY, cssW, cssH, camera.cellSize)
+  const grid = viewBounds(camera.origin, css, camera.cellSize)
   return {
-    cssW,
-    cssH,
+    css,
     cellSize: camera.cellSize,
-    cols,
-    rows,
-    ox,
-    oy,
+    cols: grid.cols,
+    rows: grid.rows,
+    origin: grid.min,
   }
 }
 
 function paintGrid(frame: PaintFrame, view: PaintView): void {
   if (!frame.showGrid) return
   const { ctx } = frame
-  const { cssW, cssH, cellSize, cols, rows } = view
+  const { css, cellSize, cols, rows } = view
 
   ctx.strokeStyle = gridColor(frame.background)
   ctx.lineWidth = 1
@@ -164,26 +170,24 @@ function paintGrid(frame: PaintFrame, view: PaintView): void {
   for (let c = 0; c <= cols; c++) {
     const px = Math.round(c * cellSize) + 0.5
     ctx.moveTo(px, 0)
-    ctx.lineTo(px, cssH)
+    ctx.lineTo(px, css.y)
   }
   for (let r = 0; r <= rows; r++) {
     const py = Math.round(r * cellSize) + 0.5
     ctx.moveTo(0, py)
-    ctx.lineTo(cssW, py)
+    ctx.lineTo(css.x, py)
   }
   ctx.stroke()
 }
 
 function paintAlive(frame: PaintFrame, view: PaintView): void {
   const { ctx, alive } = frame
-  const { cssW, cssH, cellSize, ox, oy } = view
   ctx.fillStyle = frame.foreground
   for (const key of alive) {
-    const [x, y] = unpack(key)
-    const sx = (x - ox) * cellSize
-    const sy = (y - oy) * cellSize
-    if (cellOffscreen(sx, sy, cellSize, cssW, cssH)) continue
-    ctx.fillRect(sx, sy, cellSize, cellSize)
+    const cell = unpack(key)
+    if (cellOffscreen(view, cell)) continue
+    const screen = worldToScreen(view, cell)
+    ctx.fillRect(screen.x, screen.y, view.cellSize, view.cellSize)
   }
 }
 
@@ -191,53 +195,43 @@ function paintGhost(
   frame: PaintFrame,
   view: PaintView,
   hover: Point,
-  offsets: Offset[],
+  offsets: Point[],
 ): void {
   const { ctx } = frame
-  const { cellSize, ox, oy } = view
-  const origin = anchorToOrigin(hover.x, hover.y, offsets, frame.ghostAnchor)
-  let minDx = Infinity
-  let minDy = Infinity
-  let maxDx = -Infinity
-  let maxDy = -Infinity
+  const origin = anchorToOrigin(hover, offsets, frame.ghostAnchor)
 
   ctx.fillStyle = 'rgba(59, 130, 246, 0.38)'
   ctx.strokeStyle = 'rgba(37, 99, 235, 0.55)'
   ctx.lineWidth = 1
-  for (const [dx, dy] of offsets) {
-    minDx = Math.min(minDx, dx)
-    minDy = Math.min(minDy, dy)
-    maxDx = Math.max(maxDx, dx)
-    maxDy = Math.max(maxDy, dy)
-    paintCellRect(ctx, view, origin.x + dx, origin.y + dy)
+  for (const d of offsets) {
+    paintCellRect(ctx, view, add(origin, d))
   }
 
-  const boxX = (origin.x + minDx - ox) * cellSize
-  const boxY = (origin.y + minDy - oy) * cellSize
-  const boxW = (maxDx - minDx + 1) * cellSize
-  const boxH = (maxDy - minDy + 1) * cellSize
+  const localBox = boundsOf(offsets)
+  const worldMin = add(origin, localBox.min)
+  const screen = worldToScreen(view, worldMin)
+  const box = scale(sizeOf(localBox), view.cellSize)
   ctx.strokeStyle = 'rgba(37, 99, 235, 0.95)'
-  ctx.lineWidth = Math.max(2, Math.min(3, cellSize / 4))
-  ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1)
+  ctx.lineWidth = Math.max(2, Math.min(3, view.cellSize / 4))
+  ctx.strokeRect(screen.x + 0.5, screen.y + 0.5, box.x - 1, box.y - 1)
 }
 
 function paintHover(frame: PaintFrame, view: PaintView, hover: Point): void {
   const { ctx, alive } = frame
-  const { cssW, cssH, cellSize, ox, oy } = view
-  const hx = (hover.x - ox) * cellSize
-  const hy = (hover.y - oy) * cellSize
-  if (cellOffscreen(hx, hy, cellSize, cssW, cssH)) return
+  if (cellOffscreen(view, hover)) return
+  const screen = worldToScreen(view, hover)
+  const { cellSize } = view
 
-  const isAlive = alive.has(pack(hover.x, hover.y))
+  const isAlive = alive.has(packPoint(hover))
   ctx.fillStyle = isAlive
     ? 'rgba(255, 220, 60, 0.45)'
     : 'rgba(59, 130, 246, 0.35)'
-  ctx.fillRect(hx, hy, cellSize, cellSize)
+  ctx.fillRect(screen.x, screen.y, cellSize, cellSize)
   ctx.strokeStyle = isAlive
     ? 'rgba(255, 200, 0, 0.95)'
     : 'rgba(37, 99, 235, 0.95)'
   ctx.lineWidth = Math.max(1, Math.min(2, cellSize / 6))
-  ctx.strokeRect(hx + 0.5, hy + 0.5, cellSize - 1, cellSize - 1)
+  ctx.strokeRect(screen.x + 0.5, screen.y + 0.5, cellSize - 1, cellSize - 1)
 }
 
 function paintMatch(frame: PaintFrame, view: PaintView, hit: PatternHit): void {
@@ -245,7 +239,7 @@ function paintMatch(frame: PaintFrame, view: PaintView, hit: PatternHit): void {
   ctx.fillStyle = 'rgba(34, 197, 94, 0.28)'
   ctx.strokeStyle = 'rgba(22, 163, 74, 0.95)'
   ctx.lineWidth = Math.max(1.5, Math.min(2.5, view.cellSize / 5))
-  for (const cell of hit.cells) paintCellRect(ctx, view, cell.x, cell.y)
+  for (const cell of hit.cells) paintCellRect(ctx, view, cell)
 }
 
 function paintOverlay(frame: PaintFrame, view: PaintView): void {

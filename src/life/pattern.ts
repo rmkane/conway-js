@@ -1,20 +1,20 @@
 import {
-  type Offset,
+  type Point,
   type TransformOptions,
-  transformOffsets,
+  sub,
+  transformPoints,
 } from '@conway/geom'
 
 import { type AliveSet, bbox, unpack } from '@/life/cells.ts'
 import { parseShapeRows } from '@/life/shape.ts'
 
 /** Normalize live cells to top-left origin offsets. */
-export function aliveToOffsets(alive: AliveSet): Offset[] {
+export function aliveToOffsets(alive: AliveSet): Point[] {
   if (!alive.size) return []
-  const { minX, minY } = bbox(alive)
-  const offsets: Offset[] = []
+  const origin = bbox(alive).min
+  const offsets: Point[] = []
   for (const key of alive) {
-    const [x, y] = unpack(key)
-    offsets.push([x - minX, y - minY])
+    offsets.push(sub(unpack(key), origin))
   }
   return offsets
 }
@@ -26,6 +26,6 @@ export function aliveToOffsets(alive: AliveSet): Offset[] {
 export function patternOffsets(
   rows: string[],
   options: TransformOptions = {},
-): Offset[] {
-  return transformOffsets(aliveToOffsets(parseShapeRows(rows)), options)
+): Point[] {
+  return transformPoints(aliveToOffsets(parseShapeRows(rows)), options)
 }

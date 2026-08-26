@@ -2,7 +2,7 @@
   "name": "@conway/geom",
   "version": "0.1.0",
   "private": true,
-  "description": "Discrete 2D geometry: points, offsets, ortho rotate/flip, anchors",
+  "description": "Immutable 2D vector/math, bounds, and discrete rotate/flip/anchor transforms",
   "files": [
     "src"
   ],

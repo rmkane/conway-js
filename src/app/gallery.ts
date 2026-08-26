@@ -1,4 +1,5 @@
 import { el, mustGet } from '@conway/dom'
+import { boundsFrom, type Point, scale, sub, vec, ZERO } from '@conway/geom'
 
 import {
   type AliveSet,
@@ -34,10 +35,10 @@ interface GalleryItem {
   isShip: boolean
   alive: AliveSet
   pendingAlive: AliveSet | null
-  moveX: number
-  moveY: number
-  gridOffsetX: number
-  gridOffsetY: number
+  /** Per-generation ship drift in cells. */
+  move: Point
+  /** Accumulated pixel scroll for the board grid. */
+  gridOffset: Point
 }
 
 const gallery = mustGet('#gallery', HTMLElement)
@@ -80,11 +81,11 @@ function boardLayout(
   if (pad.se) {
     const cols = parsed.cols + pad.x + pad.se.x
     const rows = parsed.rows + pad.y + pad.se.y
-    const { minX, minY } = bbox(parsed.alive)
+    const origin = bbox(parsed.alive).min
     return {
       cols,
       rows,
-      alive: shiftAlive(parsed.alive, pad.x - minX, pad.y - minY),
+      alive: shiftAlive(parsed.alive, sub(vec(pad.x, pad.y), origin)),
     }
   }
   const cols = parsed.cols + pad.x * 2
@@ -95,22 +96,20 @@ function boardLayout(
 function prepareTransition(item: GalleryItem): void {
   if (item.pattern.period === 1) {
     item.pendingAlive = item.alive
-    item.moveX = 0
-    item.moveY = 0
+    item.move = ZERO
     return
   }
 
   const next = stepAlive(item.alive)
   if (item.isShip) {
-    const velocity = item.pattern.velocity ?? [0, 0]
-    const [dx, dy] = velocity
-    item.moveX = dx / item.pattern.period
-    item.moveY = dy / item.pattern.period
+    item.move = scale(item.pattern.velocity ?? ZERO, 1 / item.pattern.period)
     item.pendingAlive = homeAlive(next, item.cols, item.rows)
   } else {
-    item.moveX = 0
-    item.moveY = 0
-    item.pendingAlive = clipAlive(next, 0, 0, item.cols, item.rows)
+    item.move = ZERO
+    item.pendingAlive = clipAlive(
+      next,
+      boundsFrom(ZERO, vec(item.cols, item.rows)),
+    )
   }
 }
 
@@ -122,16 +121,13 @@ function cellSize(item: GalleryItem): number {
 function setGridScroll(item: GalleryItem, t: number): void {
   if (!item.isShip) return
   const size = cellSize(item)
-  const x = item.gridOffsetX - item.moveX * size * t
-  const y = item.gridOffsetY - item.moveY * size * t
-  item.board.style.backgroundPosition = `${x}px ${y}px`
+  const pos = sub(item.gridOffset, scale(item.move, size * t))
+  item.board.style.backgroundPosition = `${pos.x}px ${pos.y}px`
 }
 
 function commitGeneration(item: GalleryItem): void {
   if (item.isShip) {
-    const size = cellSize(item)
-    item.gridOffsetX -= item.moveX * size
-    item.gridOffsetY -= item.moveY * size
+    item.gridOffset = sub(item.gridOffset, scale(item.move, cellSize(item)))
   }
   if (item.pendingAlive) item.alive = item.pendingAlive
   renderCells(item)
@@ -213,10 +209,8 @@ function makePatternCard(pattern: LifePattern): GalleryItem {
     isShip,
     alive,
     pendingAlive: null,
-    moveX: 0,
-    moveY: 0,
-    gridOffsetX: 0,
-    gridOffsetY: 0,
+    move: ZERO,
+    gridOffset: ZERO,
   }
 
   renderCells(item)

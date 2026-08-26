@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { clamp, decodeColor, encodeColor, oneOf, parseBool } from './codecs.ts'
+import { decodeColor, encodeColor, oneOf, parseBool } from './codecs.ts'
 
 describe('parseBool', () => {
   it('parses common truthy/falsey query values', () => {
@@ -14,14 +14,6 @@ describe('parseBool', () => {
     expect(parseBool(null, true)).toBe(true)
     expect(parseBool('', false)).toBe(false)
     expect(parseBool('maybe', true)).toBe(true)
-  })
-})
-
-describe('clamp', () => {
-  it('bounds a number to the given range', () => {
-    expect(clamp(1, 2, 48)).toBe(2)
-    expect(clamp(12, 2, 48)).toBe(12)
-    expect(clamp(99, 2, 48)).toBe(48)
   })
 })
 

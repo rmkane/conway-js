@@ -22,10 +22,6 @@ export function oneOf<T extends string>(
   return fallback
 }
 
-export function clamp(n: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, n))
-}
-
 /** Fresh seed for the `seed` query param (UUID when available). */
 export function newSeedValue(): string {
   if (typeof globalThis.crypto?.randomUUID === 'function') {

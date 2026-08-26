@@ -1,18 +1,23 @@
 import {
   type AnchorMode,
+  add,
   anchorToOrigin,
+  contains,
+  type GridBounds,
+  type Point,
   type TransformOptions,
+  vec,
+  worldFromCanvas,
 } from '@conway/geom'
 
 import {
   type AliveSet,
   clipAlive,
   cloneAlive,
-  pack,
+  packPoint,
   stepAlive,
 } from '@/life/cells.ts'
 import { patternOffsets } from '@/life/pattern.ts'
-import { type ViewBounds, worldFromCanvas } from '@/life/view.ts'
 
 const HISTORY_LIMIT = 1000
 
@@ -25,7 +30,7 @@ export type SpawnOptions = TransformOptions & {
  * Bounds track the canvas at min zoom; cells outside are culled.
  */
 export type Scene = {
-  bounds: ViewBounds
+  bounds: GridBounds
   alive: AliveSet
   seedAlive: AliveSet
   seedKey: string
@@ -35,7 +40,7 @@ export type Scene = {
 
 export function createScene(): Scene {
   return {
-    bounds: worldFromCanvas(1, 1),
+    bounds: worldFromCanvas(vec(1, 1)),
     alive: new Set(),
     seedAlive: new Set(),
     seedKey: '',
@@ -45,20 +50,15 @@ export function createScene(): Scene {
 }
 
 /** Refresh stage bounds from the canvas CSS size. */
-export function syncSceneBounds(
-  scene: Scene,
-  cssW: number,
-  cssH: number,
-): void {
-  if (cssW < 1 || cssH < 1) return
-  scene.bounds = worldFromCanvas(cssW, cssH)
+export function syncSceneBounds(scene: Scene, cssSize: Point): void {
+  if (cssSize.x < 1 || cssSize.y < 1) return
+  scene.bounds = worldFromCanvas(cssSize)
 }
 
 /** Drop live cells outside the stage. */
 export function cullScene(scene: Scene): void {
   if (!scene.alive.size) return
-  const { minX, minY, maxX, maxY } = scene.bounds
-  const next = clipAlive(scene.alive, minX, minY, maxX, maxY)
+  const next = clipAlive(scene.alive, scene.bounds)
   if (next.size !== scene.alive.size) scene.alive = next
 }
 
@@ -98,20 +98,17 @@ export function undoScene(scene: Scene): boolean {
 export function spawnInScene(
   scene: Scene,
   rows: string[],
-  x: number,
-  y: number,
+  at: Point,
   options: SpawnOptions = {},
 ): void {
   const offsets = patternOffsets(rows, options)
   if (!offsets.length) return
 
-  const origin = anchorToOrigin(x, y, offsets, options.anchor ?? 'corner')
-  const { minX, minY, maxX, maxY } = scene.bounds
-  for (const [dx, dy] of offsets) {
-    const wx = origin.x + dx
-    const wy = origin.y + dy
-    if (wx >= minX && wy >= minY && wx < maxX && wy < maxY) {
-      scene.alive.add(pack(wx, wy))
+  const origin = anchorToOrigin(at, offsets, options.anchor ?? 'corner')
+  for (const d of offsets) {
+    const cell = add(origin, d)
+    if (contains(scene.bounds, cell)) {
+      scene.alive.add(packPoint(cell))
     }
   }
 }

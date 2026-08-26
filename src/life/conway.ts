@@ -1,15 +1,17 @@
 import {
   type AnchorMode,
-  type Offset,
   type Point,
   type TransformOptions,
+  vec,
 } from '@conway/geom'
 
 import {
   type Camera,
-  cellAtClient,
+  canvasCssSize,
+  cellAtClient as worldCellAtClient,
   centerCameraOnAlive,
   centerCameraOnOrigin,
+  clientToLocal,
   clampCamera,
   createCamera,
   panCamera,
@@ -75,7 +77,7 @@ export class Conway {
   /** Catalog match for the connected cluster under the hover cell (inspect). */
   hoverMatch: PatternHit | null = null
   /** Offsets from top-left for spawn ghost. */
-  ghostTemplate: Offset[] | null = null
+  ghostTemplate: Point[] | null = null
   ghostAnchor: AnchorMode = 'center'
   mode: InteractionMode = 'inspect'
 
@@ -140,24 +142,15 @@ export class Conway {
    * Change cell size. When `focus` is set (client coords on the canvas),
    * keep the world point under that pixel fixed (zoom-to-cursor).
    */
-  setZoom(
-    cellSize: number,
-    focus?: Pick<MouseEvent, 'clientX' | 'clientY'>,
-  ): void {
-    const cssW = this.canvas.clientWidth
-    const cssH = this.canvas.clientHeight
-    if (focus && cssW >= 1 && cssH >= 1) {
-      const rect = this.canvas.getBoundingClientRect()
-      // Map client → CSS canvas space (rect size can differ from clientWidth).
-      const localX =
-        rect.width > 0
-          ? ((focus.clientX - rect.left) / rect.width) * cssW
-          : focus.clientX - rect.left
-      const localY =
-        rect.height > 0
-          ? ((focus.clientY - rect.top) / rect.height) * cssH
-          : focus.clientY - rect.top
-      zoomCameraAt(this.camera, cellSize, localX, localY, cssW, cssH)
+  setZoom(cellSize: number, focus?: Point): void {
+    const cssSize = canvasCssSize(this.canvas)
+    if (focus && cssSize.x >= 1 && cssSize.y >= 1) {
+      zoomCameraAt(
+        this.camera,
+        cellSize,
+        clientToLocal(this.canvas, focus),
+        cssSize,
+      )
     } else {
       setCameraZoom(this.camera, cellSize)
     }
@@ -166,8 +159,8 @@ export class Conway {
   }
 
   /** Shift the camera by screen pixels (drag right → content follows). */
-  panBy(dxPx: number, dyPx: number): void {
-    panCamera(this.camera, dxPx, dyPx)
+  panBy(delta: Point): void {
+    panCamera(this.camera, delta)
     this._clampCamera()
     this.scheduleRender()
   }
@@ -215,14 +208,9 @@ export class Conway {
     this.scheduleRender()
   }
 
-  spawn(
-    rows: string[],
-    x: number,
-    y: number,
-    options: SpawnOptions = {},
-  ): void {
+  spawn(rows: string[], at: Point, options: SpawnOptions = {}): void {
     this._syncWorld()
-    spawnInScene(this.scene, rows, x, y, options)
+    spawnInScene(this.scene, rows, at, options)
     this.scheduleRender()
     this._emit()
   }
@@ -343,26 +331,22 @@ export class Conway {
     this.scheduleRender()
   }
 
-  /** Map client coordinates on the canvas to world cell coordinates. */
+  /** Map a client point on the canvas to world cell coordinates. */
+  cellAtClient(client: Point): Point | null {
+    return worldCellAtClient(this.camera, this.canvas, client)
+  }
+
+  /** Convenience: map a mouse/pointer event to a world cell. */
   cellAtEvent(event: Pick<MouseEvent, 'clientX' | 'clientY'>): Point | null {
-    return cellAtClient(this.camera, this.canvas, event.clientX, event.clientY)
+    return this.cellAtClient(vec(event.clientX, event.clientY))
   }
 
   private _syncWorld(): void {
-    syncSceneBounds(
-      this.scene,
-      this.canvas.clientWidth,
-      this.canvas.clientHeight,
-    )
+    syncSceneBounds(this.scene, canvasCssSize(this.canvas))
   }
 
   private _clampCamera(): void {
-    clampCamera(
-      this.camera,
-      this.scene.bounds,
-      this.canvas.clientWidth,
-      this.canvas.clientHeight,
-    )
+    clampCamera(this.camera, this.scene.bounds, canvasCssSize(this.canvas))
   }
 
   private _refreshHoverMatch(): void {
@@ -372,8 +356,7 @@ export class Conway {
     }
     this.hoverMatch = identifyAt(
       this.scene.alive,
-      this.hoverCell.x,
-      this.hoverCell.y,
+      this.hoverCell,
       CATALOG_INDEX,
     )
   }

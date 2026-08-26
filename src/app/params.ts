@@ -1,6 +1,5 @@
-import type { AnchorMode, Rotation } from '@conway/geom'
+import { type AnchorMode, clamp, type Rotation } from '@conway/geom'
 import {
-  clamp,
   currentSearchParams,
   decodeColor,
   encodeColor,

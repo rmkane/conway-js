@@ -1,16 +1,11 @@
+import { ZERO } from '@conway/geom'
 import { describe, expect, it } from 'vitest'
 
-import { type AliveSet, stepAlive, unpack } from '@/life/cells.ts'
+import { bbox, stepAlive } from '@/life/cells.ts'
 import { LIFE_PATTERNS } from '@/life/data.ts'
-import { buildPatternIndex, identifyAt } from '@/life/identify.ts'
+import { buildPatternIndex, fingerprint, identifyAt } from '@/life/identify.ts'
+import { aliveToOffsets } from '@/life/pattern.ts'
 import { parseShapeRows } from '@/life/shape.ts'
-
-function fingerprint(alive: AliveSet): string {
-  return [...alive]
-    .map((k) => unpack(k).join(','))
-    .toSorted()
-    .join(';')
-}
 
 describe('LIFE_PATTERNS dynamics', () => {
   for (const [id, pattern] of Object.entries(LIFE_PATTERNS)) {
@@ -19,10 +14,10 @@ describe('LIFE_PATTERNS dynamics', () => {
     }
 
     it(`${id} returns to its seed within period ${pattern.period}`, () => {
-      const seed = fingerprint(parseShapeRows(pattern.shape))
+      const seed = fingerprint(aliveToOffsets(parseShapeRows(pattern.shape)))
       let alive = parseShapeRows(pattern.shape)
       for (let i = 0; i < pattern.period; i++) alive = stepAlive(alive)
-      expect(fingerprint(alive)).toBe(seed)
+      expect(fingerprint(aliveToOffsets(alive))).toBe(seed)
     })
   }
 })
@@ -35,14 +30,9 @@ describe('gosperGliderGun', () => {
 
     for (let i = 0; i < gun.period; i++) alive = stepAlive(alive)
 
-    let maxY = -Infinity
-    for (const key of alive) {
-      const [, y] = unpack(key)
-      maxY = Math.max(maxY, y)
-    }
-
+    // Half-open bbox: max.y is one past the last occupied row.
     expect(alive.size).toBe(seed + 5)
-    expect(maxY).toBeGreaterThan(gun.shape.length)
+    expect(bbox(alive).max.y - 1).toBeGreaterThan(gun.shape.length)
   })
 })
 
@@ -51,11 +41,11 @@ describe('new still-life identification', () => {
 
   it('recognizes a ship', () => {
     const alive = parseShapeRows(LIFE_PATTERNS.ship.shape)
-    expect(identifyAt(alive, 0, 0, index)?.id).toBe('ship')
+    expect(identifyAt(alive, ZERO, index)?.id).toBe('ship')
   })
 
   it('recognizes eater 1', () => {
     const alive = parseShapeRows(LIFE_PATTERNS.eater1.shape)
-    expect(identifyAt(alive, 0, 0, index)?.id).toBe('eater1')
+    expect(identifyAt(alive, ZERO, index)?.id).toBe('eater1')
   })
 })

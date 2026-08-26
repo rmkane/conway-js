@@ -1,40 +1,62 @@
+import {
+  add,
+  type Bounds,
+  boundsOf,
+  contains,
+  floor,
+  type Point,
+  scale,
+  sizeOf,
+  sub,
+  vec,
+  ZERO,
+} from '@conway/geom'
+
 /** Shared B3/S23 set helpers used by the canvas engine and gallery. */
 
 export type CellKey = string
 export type AliveSet = Set<CellKey>
 
+/** 8-neighbor offsets (no center). */
+export const NEIGHBOR_OFFSETS: readonly Point[] = [
+  vec(-1, -1),
+  vec(0, -1),
+  vec(1, -1),
+  vec(-1, 0),
+  vec(1, 0),
+  vec(-1, 1),
+  vec(0, 1),
+  vec(1, 1),
+]
+
 export function pack(x: number, y: number): CellKey {
   return `${x},${y}`
 }
 
-export function unpack(key: CellKey): [number, number] {
+export function packPoint(p: Point): CellKey {
+  return pack(p.x, p.y)
+}
+
+export function unpack(key: CellKey): Point {
   const i = key.indexOf(',')
-  return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
+  return vec(Number(key.slice(0, i)), Number(key.slice(i + 1)))
 }
 
 export function cloneAlive(alive: AliveSet): AliveSet {
   return new Set(alive)
 }
 
-function tallyNeighbors(
-  counts: Map<CellKey, number>,
-  x: number,
-  y: number,
-): void {
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue
-      const k = pack(x + dx, y + dy)
-      counts.set(k, (counts.get(k) || 0) + 1)
-    }
+function tallyNeighbors(counts: Map<CellKey, number>, cell: Point): void {
+  for (const d of NEIGHBOR_OFFSETS) {
+    const k = packPoint(add(cell, d))
+    counts.set(k, (counts.get(k) || 0) + 1)
   }
 }
 
 export function stepAlive(alive: AliveSet): AliveSet {
   const counts = new Map<CellKey, number>()
   for (const key of alive) {
-    const [x, y] = unpack(key)
-    tallyNeighbors(counts, x, y)
+    tallyNeighbors(counts, unpack(key))
   }
 
   const next: AliveSet = new Set()
@@ -45,65 +67,42 @@ export function stepAlive(alive: AliveSet): AliveSet {
 }
 
 /**
- * Keep only cells in the half-open window [minX, maxX) × [minY, maxY).
+ * Keep only cells inside half-open `bounds`.
  * Used to drop patterns that have left the visible board.
  */
-export function clipAlive(
-  alive: AliveSet,
-  minX: number,
-  minY: number,
-  maxX: number,
-  maxY: number,
-): AliveSet {
+export function clipAlive(alive: AliveSet, bounds: Bounds): AliveSet {
   const next: AliveSet = new Set()
   for (const key of alive) {
-    const [x, y] = unpack(key)
-    if (x >= minX && y >= minY && x < maxX && y < maxY) next.add(key)
+    if (contains(bounds, unpack(key))) next.add(key)
   }
   return next
 }
 
-export function bbox(alive: AliveSet): {
-  minX: number
-  minY: number
-  maxX: number
-  maxY: number
-} {
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const key of alive) {
-    const [x, y] = unpack(key)
-    minX = Math.min(minX, x)
-    minY = Math.min(minY, y)
-    maxX = Math.max(maxX, x)
-    maxY = Math.max(maxY, y)
-  }
-  if (!alive.size) return { minX: 0, minY: 0, maxX: 0, maxY: 0 }
-  return { minX, minY, maxX, maxY }
+/** Half-open bbox of live cells (`max` is one past the last occupied cell). */
+export function bbox(alive: AliveSet): Bounds {
+  if (!alive.size) return { min: ZERO, max: ZERO }
+  const points: Point[] = []
+  for (const key of alive) points.push(unpack(key))
+  return boundsOf(points)
 }
 
-export function shiftAlive(alive: AliveSet, dx: number, dy: number): AliveSet {
-  if (dx === 0 && dy === 0) return alive
+export function shiftAlive(alive: AliveSet, delta: Point): AliveSet {
+  if (delta.x === 0 && delta.y === 0) return alive
   const next: AliveSet = new Set()
   for (const key of alive) {
-    const [x, y] = unpack(key)
-    next.add(pack(x + dx, y + dy))
+    next.add(packPoint(add(unpack(key), delta)))
   }
   return next
 }
 
+/** Translate `alive` so its bbox is centered in a cols×rows board. */
 export function homeAlive(
   alive: AliveSet,
   cols: number,
   rows: number,
 ): AliveSet {
   if (!alive.size) return alive
-  const { minX, minY, maxX, maxY } = bbox(alive)
-  const width = maxX - minX + 1
-  const height = maxY - minY + 1
-  const targetMinX = Math.floor((cols - width) / 2)
-  const targetMinY = Math.floor((rows - height) / 2)
-  return shiftAlive(alive, targetMinX - minX, targetMinY - minY)
+  const box = bbox(alive)
+  const target = floor(scale(sub(vec(cols, rows), sizeOf(box)), 0.5))
+  return shiftAlive(alive, sub(target, box.min))
 }

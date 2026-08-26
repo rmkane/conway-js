@@ -1,3 +1,5 @@
+import type { Point } from '@conway/geom'
+
 // Pattern shapes only (tight bounding box). Later generations use B3/S23.
 // '#' = alive, '.' = dead.
 
@@ -13,8 +15,8 @@ export interface LifePattern {
   period: number
   /** Live-cell geometry; no empty padding rows/cols. */
   shape: string[]
-  /** Cell displacement per period for spaceships: [dx, dy]. */
-  velocity?: readonly [number, number]
+  /** Cell displacement per period for spaceships. */
+  velocity?: Point
   /**
    * Extra empty cells on the about-page gallery board.
    * Symmetric `x`/`y` margins when `se` is omitted; with `se`, the seed is
@@ -191,28 +193,28 @@ export const LIFE_PATTERNS: Record<string, LifePattern> = {
     name: 'Glider',
     category: 'Spaceships',
     period: 4,
-    velocity: [1, 1],
+    velocity: { x: 1, y: 1 },
     shape: ['.#.', '..#', '###'],
   },
   lwss: {
     name: 'Light-weight spaceship (LWSS)',
     category: 'Spaceships',
     period: 4,
-    velocity: [2, 0],
+    velocity: { x: 2, y: 0 },
     shape: ['#..#.', '....#', '#...#', '.####'],
   },
   mwss: {
     name: 'Middle-weight spaceship (MWSS)',
     category: 'Spaceships',
     period: 4,
-    velocity: [2, 0],
+    velocity: { x: 2, y: 0 },
     shape: ['.#####.', '#....#.', '.....#.', '#...#..', '..#....'],
   },
   hwss: {
     name: 'Heavy-weight spaceship (HWSS)',
     category: 'Spaceships',
     period: 4,
-    velocity: [2, 0],
+    velocity: { x: 2, y: 0 },
     shape: ['.######.', '#.....#.', '......#.', '#....#..', '..##....'],
   },
   gosperGliderGun: {
