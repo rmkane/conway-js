@@ -15,6 +15,7 @@ export default defineConfig({
       'warn',
       {
         allow: [
+          '__APP_VERSION__',
           '__LIFE_BOOT__',
           '_acc',
           '_clampCamera',

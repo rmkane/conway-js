@@ -1,6 +1,7 @@
 import { el, mustGet } from '@conway/dom'
 import { boundsFrom, type Point, scale, sub, vec, ZERO } from '@conway/geom'
 
+import { mountAppVersion } from '@/app/version.ts'
 import {
   type AliveSet,
   bbox,
@@ -24,6 +25,8 @@ import {
 } from '@/life/timing.ts'
 
 import '@/styles/main.css'
+
+mountAppVersion()
 
 interface GalleryItem {
   card: HTMLElement

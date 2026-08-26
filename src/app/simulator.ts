@@ -8,6 +8,7 @@ import {
   parseRotation,
   writeParams,
 } from '@/app/params.ts'
+import { mountAppVersion } from '@/app/version.ts'
 import { Conway } from '@/life/conway.ts'
 import { LIFE_PATTERNS } from '@/life/data.ts'
 import {
@@ -17,6 +18,8 @@ import {
 } from '@/life/timing.ts'
 
 import '@/styles/main.css'
+
+mountAppVersion()
 
 const form = mustGet('#settings', HTMLFormElement)
 const aboutLink = mustGet('#about-link', HTMLAnchorElement)
