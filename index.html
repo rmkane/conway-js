@@ -272,8 +272,8 @@
             width="800"
             height="600"
             role="img"
-            aria-label="Game of Life board. In spawn mode, click to place the selected pattern."
-            class="block aspect-[unset] h-full min-h-0 w-full rounded-xl border border-zinc-300 bg-black shadow-sm dark:border-zinc-700"
+            aria-label="Game of Life board. Drag to pan. In spawn mode, click to place the selected pattern."
+            class="block aspect-[unset] h-full min-h-0 w-full touch-none rounded-xl border border-zinc-300 bg-black shadow-sm dark:border-zinc-700"
           ></canvas>
 
           <div
@@ -324,15 +324,19 @@
                 <input
                   id="speed"
                   type="range"
-                  min="5"
-                  max="1000"
-                  step="1"
-                  value="40"
+                  min="0.25"
+                  max="2"
+                  step="0.25"
+                  value="1"
                   class="w-28 sm:w-35"
-                  title="Milliseconds between generations while playing"
+                  title="Playback speed (1× = 40ms per generation)"
                   aria-describedby="speed-label"
                 />
-                <span id="speed-label">40 ms</span>
+                <span
+                  id="speed-label"
+                  class="inline-block min-w-[4.5ch] tabular-nums"
+                  >1.00×</span
+                >
               </label>
 
               <div
@@ -372,6 +376,15 @@
                   class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                 >
                   Clear
+                </button>
+                <button
+                  id="center"
+                  type="button"
+                  title="Center the view on live cells"
+                  aria-label="Center the view on live cells"
+                  class="cursor-pointer appearance-none rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-900 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                  Center
                 </button>
                 <div
                   class="mx-0.5 h-6 w-px bg-zinc-300 dark:bg-zinc-700"
@@ -520,15 +533,16 @@
           a pattern ghost and places on click;
           <strong class="text-zinc-900 dark:text-zinc-100">Inspect</strong>
           highlights the cell under the cursor and names catalog shapes when the
-          live cluster matches a seed (any rotation/flip).
+          live cluster matches a seed (any rotation/flip). Drag on the board to
+          pan; cells that leave the world are removed.
           <strong class="text-zinc-900 dark:text-zinc-100"
             >Cursor anchor</strong
           >
           chooses center vs top-left for spawn placement.
         </p>
         <p class="m-0 mb-2.5 text-sm text-zinc-500 dark:text-zinc-400">
-          Use the on-canvas bar to play, step, reset to seed, or clear the
-          board. Settings are stored in the URL.
+          Use the on-canvas bar to play, step, reset to seed, clear, or center
+          the view. Settings are stored in the URL.
         </p>
       </aside>
     </div>

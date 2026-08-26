@@ -5,6 +5,7 @@ import {
   type Point,
 } from '@conway/geom'
 
+import type { Camera } from '@/life/camera.ts'
 import { type AliveSet, pack, unpack } from '@/life/cells.ts'
 import type { PatternHit } from '@/life/identify.ts'
 import { viewBounds } from '@/life/view.ts'
@@ -19,17 +20,15 @@ type PaintView = {
   oy: number
 }
 
-/** Snapshot of engine state needed to paint one frame. */
-export type PaintScene = {
+/** One frame: scene content + camera + interaction overlays. */
+export type PaintFrame = {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
-  cellSize: number
+  camera: Camera
+  alive: AliveSet
   foreground: string
   background: string
   showGrid: boolean
-  originX: number
-  originY: number
-  alive: AliveSet
   mode: 'inspect' | 'spawn'
   hoverCell: Point | null
   hoverMatch: PatternHit | null
@@ -61,20 +60,23 @@ function paintCellRect(
   ctx.strokeRect(sx + 0.5, sy + 0.5, cellSize - 1, cellSize - 1)
 }
 
-function gridColor(background: string): string {
+function bgLuma(background: string): number | null {
   const bg = background.trim()
-  if (bg.startsWith('#') && bg.length >= 7) {
-    const r = Number.parseInt(bg.slice(1, 3), 16)
-    const g = Number.parseInt(bg.slice(3, 5), 16)
-    const b = Number.parseInt(bg.slice(5, 7), 16)
-    const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-    return luma > 0.5 ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'
-  }
-  return 'rgba(127,127,127,0.35)'
+  if (!bg.startsWith('#') || bg.length < 7) return null
+  const r = Number.parseInt(bg.slice(1, 3), 16)
+  const g = Number.parseInt(bg.slice(3, 5), 16)
+  const b = Number.parseInt(bg.slice(5, 7), 16)
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
 }
 
-function beginFrame(scene: PaintScene): PaintView | null {
-  const { canvas, ctx, cellSize } = scene
+function gridColor(background: string): string {
+  const luma = bgLuma(background)
+  if (luma == null) return 'rgba(127,127,127,0.35)'
+  return luma > 0.5 ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'
+}
+
+function beginFrame(frame: PaintFrame): PaintView | null {
+  const { canvas, ctx, camera } = frame
   const dpr = window.devicePixelRatio || 1
   const cssW = canvas.clientWidth
   const cssH = canvas.clientHeight
@@ -88,7 +90,7 @@ function beginFrame(scene: PaintScene): PaintView | null {
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.fillStyle = scene.background
+  ctx.fillStyle = frame.background
   ctx.fillRect(0, 0, cssW, cssH)
 
   const {
@@ -96,11 +98,11 @@ function beginFrame(scene: PaintScene): PaintView | null {
     rows,
     minX: ox,
     minY: oy,
-  } = viewBounds(scene.originX, scene.originY, cssW, cssH, cellSize)
+  } = viewBounds(camera.originX, camera.originY, cssW, cssH, camera.cellSize)
   return {
     cssW,
     cssH,
-    cellSize,
+    cellSize: camera.cellSize,
     cols,
     rows,
     ox,
@@ -108,11 +110,12 @@ function beginFrame(scene: PaintScene): PaintView | null {
   }
 }
 
-function paintGrid(scene: PaintScene, view: PaintView): void {
-  if (!scene.showGrid) return
-  const { ctx } = scene
+function paintGrid(frame: PaintFrame, view: PaintView): void {
+  if (!frame.showGrid) return
+  const { ctx } = frame
   const { cssW, cssH, cellSize, cols, rows } = view
-  ctx.strokeStyle = gridColor(scene.background)
+
+  ctx.strokeStyle = gridColor(frame.background)
   ctx.lineWidth = 1
   ctx.beginPath()
   for (let c = 0; c <= cols; c++) {
@@ -128,10 +131,10 @@ function paintGrid(scene: PaintScene, view: PaintView): void {
   ctx.stroke()
 }
 
-function paintAlive(scene: PaintScene, view: PaintView): void {
-  const { ctx, alive } = scene
+function paintAlive(frame: PaintFrame, view: PaintView): void {
+  const { ctx, alive } = frame
   const { cssW, cssH, cellSize, ox, oy } = view
-  ctx.fillStyle = scene.foreground
+  ctx.fillStyle = frame.foreground
   for (const key of alive) {
     const [x, y] = unpack(key)
     const sx = (x - ox) * cellSize
@@ -142,14 +145,14 @@ function paintAlive(scene: PaintScene, view: PaintView): void {
 }
 
 function paintGhost(
-  scene: PaintScene,
+  frame: PaintFrame,
   view: PaintView,
   hover: Point,
   offsets: Offset[],
 ): void {
-  const { ctx } = scene
+  const { ctx } = frame
   const { cellSize, ox, oy } = view
-  const origin = anchorToOrigin(hover.x, hover.y, offsets, scene.ghostAnchor)
+  const origin = anchorToOrigin(hover.x, hover.y, offsets, frame.ghostAnchor)
   let minDx = Infinity
   let minDy = Infinity
   let maxDx = -Infinity
@@ -175,8 +178,8 @@ function paintGhost(
   ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1)
 }
 
-function paintHover(scene: PaintScene, view: PaintView, hover: Point): void {
-  const { ctx, alive } = scene
+function paintHover(frame: PaintFrame, view: PaintView, hover: Point): void {
+  const { ctx, alive } = frame
   const { cssW, cssH, cellSize, ox, oy } = view
   const hx = (hover.x - ox) * cellSize
   const hy = (hover.y - oy) * cellSize
@@ -194,35 +197,35 @@ function paintHover(scene: PaintScene, view: PaintView, hover: Point): void {
   ctx.strokeRect(hx + 0.5, hy + 0.5, cellSize - 1, cellSize - 1)
 }
 
-function paintMatch(scene: PaintScene, view: PaintView, hit: PatternHit): void {
-  const { ctx } = scene
+function paintMatch(frame: PaintFrame, view: PaintView, hit: PatternHit): void {
+  const { ctx } = frame
   ctx.fillStyle = 'rgba(34, 197, 94, 0.28)'
   ctx.strokeStyle = 'rgba(22, 163, 74, 0.95)'
   ctx.lineWidth = Math.max(1.5, Math.min(2.5, view.cellSize / 5))
   for (const cell of hit.cells) paintCellRect(ctx, view, cell.x, cell.y)
 }
 
-function paintOverlay(scene: PaintScene, view: PaintView): void {
+function paintOverlay(frame: PaintFrame, view: PaintView): void {
   if (
-    scene.mode === 'spawn' &&
-    scene.hoverCell &&
-    scene.ghostTemplate?.length
+    frame.mode === 'spawn' &&
+    frame.hoverCell &&
+    frame.ghostTemplate?.length
   ) {
-    paintGhost(scene, view, scene.hoverCell, scene.ghostTemplate)
+    paintGhost(frame, view, frame.hoverCell, frame.ghostTemplate)
     return
   }
-  if (scene.hoverMatch) {
-    paintMatch(scene, view, scene.hoverMatch)
+  if (frame.hoverMatch) {
+    paintMatch(frame, view, frame.hoverMatch)
     return
   }
-  if (scene.hoverCell) paintHover(scene, view, scene.hoverCell)
+  if (frame.hoverCell) paintHover(frame, view, frame.hoverCell)
 }
 
-/** Paint one Life frame from a scene snapshot. */
-export function paintLife(scene: PaintScene): void {
-  const view = beginFrame(scene)
+/** Paint one Life frame from scene + camera + overlays. */
+export function paintLife(frame: PaintFrame): void {
+  const view = beginFrame(frame)
   if (!view) return
-  paintGrid(scene, view)
-  paintAlive(scene, view)
-  paintOverlay(scene, view)
+  paintGrid(frame, view)
+  paintAlive(frame, view)
+  paintOverlay(frame, view)
 }

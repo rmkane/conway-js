@@ -9,6 +9,13 @@ import {
 } from '@/app/params.ts'
 import { Conway } from '@/life/conway.ts'
 import { LIFE_PATTERNS } from '@/life/data.ts'
+import {
+  DEFAULT_SPEED_FACTOR,
+  formatSpeedFactor,
+  generationIntervalMs,
+  SPEED_FACTORS,
+  type SpeedFactor,
+} from '@/life/timing.ts'
 
 import '@/styles/main.css'
 
@@ -34,6 +41,7 @@ const prevBtn = mustGet('#prev', HTMLButtonElement)
 const nextBtn = mustGet('#next', HTMLButtonElement)
 const resetBtn = mustGet('#reset', HTMLButtonElement)
 const clearBtn = mustGet('#clear', HTMLButtonElement)
+const centerBtn = mustGet('#center', HTMLButtonElement)
 const speedInput = mustGet('#speed', HTMLInputElement)
 const speedLabel = mustGet('#speed-label', HTMLElement)
 const statusGen = mustGet('#status-gen', HTMLElement)
@@ -113,10 +121,18 @@ const game = new Conway(canvas, {
   showGrid: initial.grid,
 })
 
+function syncCanvasCursor(panning = false): void {
+  if (panning) {
+    canvas.style.cursor = 'grabbing'
+    return
+  }
+  canvas.style.cursor = modeSelect.value === 'spawn' ? 'crosshair' : 'grab'
+}
+
 function syncModeUi(): void {
   const mode = modeSelect.value === 'inspect' ? 'inspect' : 'spawn'
   game.setMode(mode)
-  canvas.style.cursor = mode === 'spawn' ? 'crosshair' : 'default'
+  syncCanvasCursor()
   form.dataset.mode = mode
   spawnFields.disabled = mode !== 'spawn'
 }
@@ -210,7 +226,13 @@ function syncStatus(): void {
 game.onChange(syncStatus)
 syncStatus()
 
-function applyFormToGame({ resetSeed = false } = {}): void {
+function applyFormToGame({
+  resetSeed = false,
+  zoomFocus,
+}: {
+  resetSeed?: boolean
+  zoomFocus?: Pick<MouseEvent, 'clientX' | 'clientY'>
+} = {}): void {
   const state = formState()
   seedInput.value = state.seed
   zoomInput.value = String(state.zoom)
@@ -218,7 +240,7 @@ function applyFormToGame({ resetSeed = false } = {}): void {
   writeParams(state, aboutLink)
   window.__LIFE_BOOT__ = state
 
-  game.setZoom(state.zoom)
+  game.setZoom(state.zoom, zoomFocus)
   game.setColors(state.fg, state.bg)
   game.setShowGrid(state.grid)
   syncGhost()
@@ -250,6 +272,20 @@ seedRandomBtn.addEventListener('click', () => {
 
 let pointerClient: { x: number; y: number } | null = null
 
+const PAN_THRESHOLD_PX = 4
+
+type PanDrag = {
+  pointerId: number
+  startX: number
+  startY: number
+  lastX: number
+  lastY: number
+  active: boolean
+}
+
+let panDrag: PanDrag | null = null
+let suppressClick = false
+
 function syncHoverFromClient(clientX: number, clientY: number): void {
   const cell = game.cellAtEvent({ clientX, clientY })
   setCursorStatus(cell)
@@ -260,7 +296,10 @@ function syncHoverFromClient(clientX: number, clientY: number): void {
 function applyZoom(cellSize: number): void {
   zoomInput.value = String(clamp(cellSize, 2, 48))
   zoomLabel.textContent = `${zoomInput.value}px`
-  applyFormToGame()
+  const zoomFocus = pointerClient
+    ? { clientX: pointerClient.x, clientY: pointerClient.y }
+    : undefined
+  applyFormToGame({ zoomFocus })
   if (pointerClient) syncHoverFromClient(pointerClient.x, pointerClient.y)
 }
 
@@ -309,12 +348,36 @@ clearBtn.addEventListener('click', () => {
   syncStatus()
 })
 
-let interval = Number(speedInput.value)
-speedLabel.textContent = `${interval} ms`
+centerBtn.addEventListener('click', () => {
+  game.centerView()
+  if (pointerClient) syncHoverFromClient(pointerClient.x, pointerClient.y)
+})
+
+function snapSpeedFactor(raw: number): SpeedFactor {
+  if (!Number.isFinite(raw)) return DEFAULT_SPEED_FACTOR
+  let best: SpeedFactor = DEFAULT_SPEED_FACTOR
+  let bestDist = Infinity
+  for (const factor of SPEED_FACTORS) {
+    const dist = Math.abs(factor - raw)
+    if (dist < bestDist) {
+      best = factor
+      bestDist = dist
+    }
+  }
+  return best
+}
+
+function syncSpeedFromInput(): number {
+  const factor = snapSpeedFactor(Number(speedInput.value))
+  speedInput.value = String(factor)
+  speedLabel.textContent = formatSpeedFactor(factor)
+  return generationIntervalMs(factor)
+}
+
+let interval = syncSpeedFromInput()
 
 speedInput.addEventListener('input', () => {
-  interval = Number(speedInput.value)
-  speedLabel.textContent = `${interval} ms`
+  interval = syncSpeedFromInput()
 })
 
 const ro = new ResizeObserver(() => game.resize())
@@ -324,12 +387,64 @@ function setCursorStatus(cell: { x: number; y: number } | null): void {
   statusCursor.textContent = cell ? `${cell.x}, ${cell.y}` : '—'
 }
 
-canvas.addEventListener('mousemove', (event) => {
+function endPan(event: PointerEvent): void {
+  if (!panDrag || event.pointerId !== panDrag.pointerId) return
+  if (panDrag.active) suppressClick = true
+  panDrag = null
+  if (canvas.hasPointerCapture(event.pointerId)) {
+    canvas.releasePointerCapture(event.pointerId)
+  }
+  syncCanvasCursor()
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  if (panDrag) return
+  panDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    lastX: event.clientX,
+    lastY: event.clientY,
+    active: false,
+  }
   pointerClient = { x: event.clientX, y: event.clientY }
+  canvas.setPointerCapture(event.pointerId)
+})
+
+canvas.addEventListener('pointermove', (event) => {
+  pointerClient = { x: event.clientX, y: event.clientY }
+
+  if (panDrag && event.pointerId === panDrag.pointerId) {
+    if (!panDrag.active) {
+      const dist = Math.hypot(
+        event.clientX - panDrag.startX,
+        event.clientY - panDrag.startY,
+      )
+      if (dist < PAN_THRESHOLD_PX) {
+        syncHoverFromClient(event.clientX, event.clientY)
+        return
+      }
+      panDrag.active = true
+      syncCanvasCursor(true)
+    }
+    const dx = event.clientX - panDrag.lastX
+    const dy = event.clientY - panDrag.lastY
+    panDrag.lastX = event.clientX
+    panDrag.lastY = event.clientY
+    game.panBy(dx, dy)
+    syncHoverFromClient(event.clientX, event.clientY)
+    return
+  }
+
   syncHoverFromClient(event.clientX, event.clientY)
 })
 
-canvas.addEventListener('mouseleave', () => {
+canvas.addEventListener('pointerup', endPan)
+canvas.addEventListener('pointercancel', endPan)
+
+canvas.addEventListener('pointerleave', () => {
+  if (panDrag) return
   pointerClient = null
   setCursorStatus(null)
   game.setHoverCell(null)
@@ -337,6 +452,10 @@ canvas.addEventListener('mouseleave', () => {
 })
 
 canvas.addEventListener('click', (event) => {
+  if (suppressClick) {
+    suppressClick = false
+    return
+  }
   if (modeSelect.value !== 'spawn') return
   const cell = game.cellAtEvent(event)
   if (!cell) return

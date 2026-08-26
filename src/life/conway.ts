@@ -1,32 +1,42 @@
 import {
   type AnchorMode,
-  anchorToOrigin,
   type Offset,
   type Point,
   type TransformOptions,
 } from '@conway/geom'
 
 import {
-  type AliveSet,
-  bbox,
-  clipAlive,
-  cloneAlive,
-  pack,
-  stepAlive,
-} from '@/life/cells.ts'
+  type Camera,
+  cellAtClient,
+  centerCameraOnAlive,
+  clampCamera,
+  createCamera,
+  panCamera,
+  setCameraZoom,
+  zoomCameraAt,
+} from '@/life/camera.ts'
 import { CATALOG_INDEX, identifyAt, type PatternHit } from '@/life/identify.ts'
 import { paintLife } from '@/life/paint.ts'
 import { patternOffsets } from '@/life/pattern.ts'
 import { randomSoup } from '@/life/rng.ts'
-import { MIN_CELL_SIZE, viewBounds } from '@/life/view.ts'
+import {
+  clearScene,
+  createScene,
+  cullScene,
+  resetScene,
+  type Scene,
+  type SpawnOptions,
+  spawnInScene,
+  stepScene,
+  syncSceneBounds,
+  undoScene,
+} from '@/life/scene.ts'
 
-const HISTORY_LIMIT = 1000
+export type { SpawnOptions } from '@/life/scene.ts'
+export type { Camera } from '@/life/camera.ts'
+export type { Scene } from '@/life/scene.ts'
 
 export type InteractionMode = 'inspect' | 'spawn'
-
-export type SpawnOptions = TransformOptions & {
-  anchor?: AnchorMode
-}
 
 export interface ConwayOptions {
   cellSize?: number
@@ -43,27 +53,21 @@ export interface RandomSeedOptions {
 }
 
 /**
- * Canvas Game of Life engine.
- * Call update() on a timer; call render() to paint (render is rAF-debounced).
+ * Canvas Game of Life facade: owns a {@link Scene} (what exists) and a
+ * {@link Camera} (what you see), plus interaction chrome and painting.
  */
 export class Conway {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
 
-  cellSize: number
+  readonly scene: Scene
+  readonly camera: Camera
+
   foreground: string
   background: string
   showGrid: boolean
 
   running = false
-  generation = 0
-  alive: AliveSet = new Set()
-  seedAlive: AliveSet = new Set()
-  seedKey = ''
-  history: AliveSet[] = []
-
-  originX = 0
-  originY = 0
   hoverCell: Point | null = null
   /** Catalog match for the connected cluster under the hover cell (inspect). */
   hoverMatch: PatternHit | null = null
@@ -82,7 +86,8 @@ export class Conway {
 
     this.canvas = canvas
     this.ctx = ctx
-    this.cellSize = options.cellSize ?? 8
+    this.scene = createScene()
+    this.camera = createCamera(options.cellSize ?? 8)
     this.foreground = options.foreground ?? '#111111'
     this.background = options.background ?? '#ffffff'
     this.showGrid = options.showGrid ?? false
@@ -92,8 +97,12 @@ export class Conway {
     this._onChange = fn
   }
 
+  get generation(): number {
+    return this.scene.generation
+  }
+
   get population(): number {
-    return this.alive.size
+    return this.scene.alive.size
   }
 
   get paused(): boolean {
@@ -123,8 +132,37 @@ export class Conway {
     this.scheduleRender()
   }
 
-  setZoom(cellSize: number): void {
-    this.cellSize = Math.max(1, Math.round(cellSize))
+  /**
+   * Change cell size. When `focus` is set (client coords on the canvas),
+   * keep the world point under that pixel fixed (zoom-to-cursor).
+   */
+  setZoom(
+    cellSize: number,
+    focus?: Pick<MouseEvent, 'clientX' | 'clientY'>,
+  ): void {
+    const cssW = this.canvas.clientWidth
+    const cssH = this.canvas.clientHeight
+    if (focus && cssW >= 1 && cssH >= 1) {
+      const rect = this.canvas.getBoundingClientRect()
+      zoomCameraAt(
+        this.camera,
+        cellSize,
+        focus.clientX - rect.left,
+        focus.clientY - rect.top,
+        cssW,
+        cssH,
+      )
+    } else {
+      setCameraZoom(this.camera, cellSize)
+    }
+    this._clampCamera()
+    this.scheduleRender()
+  }
+
+  /** Shift the camera by screen pixels (drag right → content follows). */
+  panBy(dxPx: number, dyPx: number): void {
+    panCamera(this.camera, dxPx, dyPx)
+    this._clampCamera()
     this.scheduleRender()
   }
 
@@ -138,8 +176,8 @@ export class Conway {
     seedKey: string | number,
     options: RandomSeedOptions = {},
   ): void {
-    this.seedKey = String(seedKey)
-    this.seedAlive = randomSoup(seedKey, options)
+    this.scene.seedKey = String(seedKey)
+    this.scene.seedAlive = randomSoup(seedKey, options)
     this.resetToSeed({ render: options.render !== false })
   }
 
@@ -172,51 +210,50 @@ export class Conway {
     y: number,
     options: SpawnOptions = {},
   ): void {
-    const offsets = patternOffsets(rows, options)
-    if (!offsets.length) return
-
-    const origin = anchorToOrigin(x, y, offsets, options.anchor ?? 'corner')
-    for (const [dx, dy] of offsets) {
-      this.alive.add(pack(origin.x + dx, origin.y + dy))
-    }
-
+    this._syncWorld()
+    spawnInScene(this.scene, rows, x, y, options)
     this.scheduleRender()
     this._emit()
   }
 
   /** Restore the initial seeded view (generation 0). */
   resetToSeed(options: { render?: boolean } = {}): void {
-    this.alive = cloneAlive(this.seedAlive)
-    this.history = []
-    this.generation = 0
-    this._centerOnAlive(this.alive)
+    this._syncWorld()
+    resetScene(this.scene)
+    centerCameraOnAlive(this.camera, this.scene.alive)
+    this._clampCamera()
     if (options.render !== false) this.scheduleRender()
     this._emit()
   }
 
   /** Empty the board (keeps the random seed for Reset). */
   clear(options: { render?: boolean } = {}): void {
-    this.alive = new Set()
-    this.history = []
-    this.generation = 0
-    this.originX = 0
-    this.originY = 0
+    clearScene(this.scene)
+    this.camera.originX = 0
+    this.camera.originY = 0
+    this._syncWorld()
+    this._clampCamera()
     if (options.render !== false) this.scheduleRender()
     this._emit()
   }
 
+  /** Snap the camera to the live population (or world origin if empty). */
+  centerView(): void {
+    centerCameraOnAlive(this.camera, this.scene.alive)
+    this._clampCamera()
+    this.scheduleRender()
+  }
+
   /** Advance one generation. Safe to spam; paint is debounced. */
   next(): void {
-    this._stepOnce()
+    stepScene(this.scene)
     this.scheduleRender()
     this._emit()
   }
 
   /** Step back one generation when history exists. */
   prev(): boolean {
-    if (!this.history.length) return false
-    this.alive = this.history.pop()!
-    this.generation -= 1
+    if (!undoScene(this.scene)) return false
     this.scheduleRender()
     this._emit()
     return true
@@ -234,7 +271,7 @@ export class Conway {
     const maxSteps = 32
 
     while (acc >= interval && steps < maxSteps) {
-      this._stepOnce()
+      stepScene(this.scene)
       acc -= interval
       steps += 1
     }
@@ -260,16 +297,15 @@ export class Conway {
   }
 
   render(): void {
+    this._syncWorld()
     paintLife({
       canvas: this.canvas,
       ctx: this.ctx,
-      cellSize: this.cellSize,
+      camera: this.camera,
+      alive: this.scene.alive,
       foreground: this.foreground,
       background: this.background,
       showGrid: this.showGrid,
-      originX: this.originX,
-      originY: this.originY,
-      alive: this.alive,
       mode: this.mode,
       hoverCell: this.hoverCell,
       hoverMatch: this.hoverMatch,
@@ -290,80 +326,32 @@ export class Conway {
   }
 
   resize(): void {
-    this._cullOffscreen()
+    this._syncWorld()
+    cullScene(this.scene)
+    this._clampCamera()
     this.scheduleRender()
-  }
-
-  /** Top-left world cell currently mapped to canvas (0, 0). */
-  viewOrigin(): Point {
-    const b = viewBounds(
-      this.originX,
-      this.originY,
-      this.canvas.clientWidth,
-      this.canvas.clientHeight,
-      this.cellSize,
-    )
-    return { x: b.minX, y: b.minY }
   }
 
   /** Map client coordinates on the canvas to world cell coordinates. */
   cellAtEvent(event: Pick<MouseEvent, 'clientX' | 'clientY'>): Point | null {
-    const rect = this.canvas.getBoundingClientRect()
-    const localX = event.clientX - rect.left
-    const localY = event.clientY - rect.top
-    if (
-      localX < 0 ||
-      localY < 0 ||
-      localX >= rect.width ||
-      localY >= rect.height
-    ) {
-      return null
-    }
-    const origin = this.viewOrigin()
-    return {
-      x: origin.x + Math.floor(localX / this.cellSize),
-      y: origin.y + Math.floor(localY / this.cellSize),
-    }
+    return cellAtClient(this.camera, this.canvas, event.clientX, event.clientY)
   }
 
-  private _centerOnAlive(alive: AliveSet): void {
-    if (!alive.size) {
-      this.originX = 0
-      this.originY = 0
-      return
-    }
-    const { minX, minY, maxX, maxY } = bbox(alive)
-    this.originX = (minX + maxX + 1) / 2
-    this.originY = (minY + maxY + 1) / 2
-  }
-
-  /** One generation: push history, step B3/S23, drop off-screen cells. */
-  private _stepOnce(): void {
-    this.history.push(cloneAlive(this.alive))
-    if (this.history.length > HISTORY_LIMIT) this.history.shift()
-    this.alive = stepAlive(this.alive)
-    this._cullOffscreen()
-    this.generation += 1
-  }
-
-  /**
-   * Drop live cells outside the canvas at minimum zoom (widest world window).
-   * Current zoom only affects painting; zooming in must not untrack cells.
-   */
-  private _cullOffscreen(): void {
-    const cssW = this.canvas.clientWidth
-    const cssH = this.canvas.clientHeight
-    if (cssW < 1 || cssH < 1 || !this.alive.size) return
-
-    const { minX, minY, maxX, maxY } = viewBounds(
-      this.originX,
-      this.originY,
-      cssW,
-      cssH,
-      MIN_CELL_SIZE,
+  private _syncWorld(): void {
+    syncSceneBounds(
+      this.scene,
+      this.canvas.clientWidth,
+      this.canvas.clientHeight,
     )
-    const next = clipAlive(this.alive, minX, minY, maxX, maxY)
-    if (next.size !== this.alive.size) this.alive = next
+  }
+
+  private _clampCamera(): void {
+    clampCamera(
+      this.camera,
+      this.scene.bounds,
+      this.canvas.clientWidth,
+      this.canvas.clientHeight,
+    )
   }
 
   private _refreshHoverMatch(): void {
@@ -372,7 +360,7 @@ export class Conway {
       return
     }
     this.hoverMatch = identifyAt(
-      this.alive,
+      this.scene.alive,
       this.hoverCell.x,
       this.hoverCell.y,
       CATALOG_INDEX,
