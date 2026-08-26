@@ -1,12 +1,7 @@
 import type { Point } from '@conway/geom'
 
 import { type AliveSet, bbox } from '@/life/cells.ts'
-import {
-  clampOrigin,
-  type ViewBounds,
-  viewBounds,
-  viewCellCounts,
-} from '@/life/view.ts'
+import { clampOrigin, type ViewBounds, viewBounds } from '@/life/view.ts'
 
 /** What you're looking through: pan + zoom over the scene. */
 export type Camera = {
@@ -29,7 +24,7 @@ export function setCameraZoom(camera: Camera, cellSize: number): void {
 
 /**
  * Zoom so the world point under `(localX, localY)` stays put.
- * Canvas-local coordinates; origin is top-left of the CSS canvas.
+ * Canvas-local coordinates in the same CSS pixel space as `cssW`/`cssH`.
  */
 export function zoomCameraAt(
   camera: Camera,
@@ -40,25 +35,19 @@ export function zoomCameraAt(
   cssH: number,
 ): void {
   const nextSize = Math.max(1, Math.round(cellSize))
+  if (nextSize === camera.cellSize) return
   if (cssW < 1 || cssH < 1) {
     setCameraZoom(camera, nextSize)
     return
   }
 
-  const before = viewBounds(
-    camera.originX,
-    camera.originY,
-    cssW,
-    cssH,
-    camera.cellSize,
-  )
-  const focusX = before.minX + localX / camera.cellSize
-  const focusY = before.minY + localY / camera.cellSize
+  // Camera origin is the world point at the CSS canvas center.
+  const focusX = camera.originX + (localX - cssW / 2) / camera.cellSize
+  const focusY = camera.originY + (localY - cssH / 2) / camera.cellSize
 
   setCameraZoom(camera, nextSize)
-  const { cols, rows } = viewCellCounts(cssW, cssH, camera.cellSize)
-  camera.originX = focusX - localX / camera.cellSize + cols / 2
-  camera.originY = focusY - localY / camera.cellSize + rows / 2
+  camera.originX = focusX - (localX - cssW / 2) / camera.cellSize
+  camera.originY = focusY - (localY - cssH / 2) / camera.cellSize
 }
 
 /** Drag right → content follows (origin moves left). */
@@ -68,11 +57,16 @@ export function panCamera(camera: Camera, dxPx: number, dyPx: number): void {
   camera.originY -= dyPx / camera.cellSize
 }
 
+/** Aim the camera at world (0, 0). */
+export function centerCameraOnOrigin(camera: Camera): void {
+  camera.originX = 0
+  camera.originY = 0
+}
+
 /** Aim the camera at the live population (or world origin if empty). */
 export function centerCameraOnAlive(camera: Camera, alive: AliveSet): void {
   if (!alive.size) {
-    camera.originX = 0
-    camera.originY = 0
+    centerCameraOnOrigin(camera)
     return
   }
   const { minX, minY, maxX, maxY } = bbox(alive)
@@ -140,7 +134,7 @@ export function cellAtClient(
     canvas.clientHeight,
   )
   return {
-    x: origin.x + Math.floor(localX / camera.cellSize),
-    y: origin.y + Math.floor(localY / camera.cellSize),
+    x: Math.floor(origin.x + localX / camera.cellSize),
+    y: Math.floor(origin.y + localY / camera.cellSize),
   }
 }

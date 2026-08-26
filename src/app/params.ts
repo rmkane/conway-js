@@ -24,6 +24,7 @@ export interface LifeParams {
   fg: string
   bg: string
   grid: boolean
+  origin: boolean
   mode: InteractionMode
   spawn: string
   rot: Rotation
@@ -39,6 +40,7 @@ const ROTATIONS: readonly Rotation[] = [0, 90, 180, 270]
 const DEFAULTS = {
   zoom: 12,
   grid: false,
+  origin: false,
   mode: 'inspect' as InteractionMode,
   spawn: 'glider',
   rot: 0 as Rotation,
@@ -77,6 +79,8 @@ function parseBootParams(validSpawn: (id: string) => boolean): LifeParams {
     ...boot,
     fg: decodeColor(boot.fg, sys.fg),
     bg: decodeColor(boot.bg, sys.bg),
+    grid: boot.grid ?? DEFAULTS.grid,
+    origin: boot.origin ?? DEFAULTS.origin,
     mode: oneOf(boot.mode, MODES, DEFAULTS.mode),
     spawn: validSpawn(boot.spawn) ? boot.spawn : DEFAULTS.spawn,
     rot: parseRotation(boot.rot),
@@ -95,6 +99,7 @@ function parseUrlParams(validSpawn: (id: string) => boolean): LifeParams {
     fg: decodeColor(params.get('fg'), sys.fg),
     bg: decodeColor(params.get('bg'), sys.bg),
     grid: getBool(params, 'grid', DEFAULTS.grid),
+    origin: getBool(params, 'origin', DEFAULTS.origin),
     mode: parseMode(params),
     spawn: validSpawn(spawnKey) ? spawnKey : DEFAULTS.spawn,
     rot: parseRotation(getNumber(params, 'rot', DEFAULTS.rot)),
@@ -121,6 +126,7 @@ export function writeParams(
   params.set('fg', encodeColor(state.fg))
   params.set('bg', encodeColor(state.bg))
   setBool(params, 'grid', state.grid)
+  setBool(params, 'origin', state.origin)
   params.set('mode', state.mode)
   params.set('spawn', state.spawn)
   params.set('rot', String(state.rot))

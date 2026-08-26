@@ -29,6 +29,7 @@ export type PaintFrame = {
   foreground: string
   background: string
   showGrid: boolean
+  showOrigin: boolean
   mode: 'inspect' | 'spawn'
   hoverCell: Point | null
   hoverMatch: PatternHit | null
@@ -73,6 +74,48 @@ function gridColor(background: string): string {
   const luma = bgLuma(background)
   if (luma == null) return 'rgba(127,127,127,0.35)'
   return luma > 0.5 ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'
+}
+
+function originColor(background: string): string {
+  const luma = bgLuma(background)
+  if (luma == null) return 'rgba(220,38,38,0.7)'
+  return luma > 0.5 ? 'rgba(185,28,28,0.75)' : 'rgba(248,113,113,0.85)'
+}
+
+function paintOrigin(frame: PaintFrame, view: PaintView): void {
+  if (!frame.showOrigin) return
+  const { ctx } = frame
+  const { cssW, cssH, cellSize, ox, oy } = view
+  // World (0, 0) in continuous canvas space.
+  const sx = (0 - ox) * cellSize
+  const sy = (0 - oy) * cellSize
+  const color = originColor(frame.background)
+  const arm = Math.max(6, cellSize * 0.75)
+
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.lineWidth = Math.max(1, Math.min(2, cellSize / 8))
+  ctx.beginPath()
+  ctx.moveTo(0, sy + 0.5)
+  ctx.lineTo(cssW, sy + 0.5)
+  ctx.moveTo(sx + 0.5, 0)
+  ctx.lineTo(sx + 0.5, cssH)
+  ctx.stroke()
+
+  // Small crosshair tick at the origin so it reads even when axes are off-screen.
+  if (sx >= -arm && sx <= cssW + arm && sy >= -arm && sy <= cssH + arm) {
+    ctx.beginPath()
+    ctx.moveTo(sx - arm, sy + 0.5)
+    ctx.lineTo(sx + arm, sy + 0.5)
+    ctx.moveTo(sx + 0.5, sy - arm)
+    ctx.lineTo(sx + 0.5, sy + arm)
+    ctx.stroke()
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.arc(sx, sy, Math.max(1.5, cellSize / 10), 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.restore()
 }
 
 function beginFrame(frame: PaintFrame): PaintView | null {
@@ -227,5 +270,6 @@ export function paintLife(frame: PaintFrame): void {
   if (!view) return
   paintGrid(frame, view)
   paintAlive(frame, view)
+  paintOrigin(frame, view)
   paintOverlay(frame, view)
 }

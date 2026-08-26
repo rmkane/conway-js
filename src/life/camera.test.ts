@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cameraViewOrigin,
   centerCameraOnAlive,
+  centerCameraOnOrigin,
   clampCamera,
   createCamera,
   panCamera,
@@ -18,6 +19,15 @@ describe('camera', () => {
     panCamera(camera, 20, -10)
     expect(camera.originX).toBe(-2)
     expect(camera.originY).toBe(1)
+  })
+
+  it('snaps to the world origin', () => {
+    const camera = createCamera()
+    camera.originX = 12
+    camera.originY = -7
+    centerCameraOnOrigin(camera)
+    expect(camera.originX).toBe(0)
+    expect(camera.originY).toBe(0)
   })
 
   it('centers on the alive bbox', () => {
@@ -47,34 +57,36 @@ describe('camera', () => {
     expect(camera.cellSize).toBe(1)
   })
 
-  it('keeps the world point under the cursor when zooming', () => {
-    const camera = createCamera(10)
+  it('keeps the world point under the cursor when zooming in or out', () => {
+    const camera = createCamera(20)
     camera.originX = 3
     camera.originY = -2
     const cssW = 100
     const cssH = 50
     const localX = 40
     const localY = 20
-    const before = viewBounds(
-      camera.originX,
-      camera.originY,
-      cssW,
-      cssH,
-      camera.cellSize,
-    )
-    const focusX = before.minX + localX / camera.cellSize
-    const focusY = before.minY + localY / camera.cellSize
 
-    zoomCameraAt(camera, 20, localX, localY, cssW, cssH)
+    const focusAt = () => {
+      const b = viewBounds(
+        camera.originX,
+        camera.originY,
+        cssW,
+        cssH,
+        camera.cellSize,
+      )
+      return {
+        x: b.minX + localX / camera.cellSize,
+        y: b.minY + localY / camera.cellSize,
+      }
+    }
 
-    const after = viewBounds(
-      camera.originX,
-      camera.originY,
-      cssW,
-      cssH,
-      camera.cellSize,
-    )
-    expect(after.minX + localX / camera.cellSize).toBeCloseTo(focusX)
-    expect(after.minY + localY / camera.cellSize).toBeCloseTo(focusY)
+    const before = focusAt()
+    zoomCameraAt(camera, 10, localX, localY, cssW, cssH) // zoom out
+    expect(focusAt().x).toBeCloseTo(before.x, 10)
+    expect(focusAt().y).toBeCloseTo(before.y, 10)
+
+    zoomCameraAt(camera, 24, localX, localY, cssW, cssH) // zoom in
+    expect(focusAt().x).toBeCloseTo(before.x, 10)
+    expect(focusAt().y).toBeCloseTo(before.y, 10)
   })
 })

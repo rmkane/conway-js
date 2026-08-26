@@ -1,7 +1,6 @@
 import { el, mustGet } from '@conway/dom'
 import { clamp, newSeedValue } from '@conway/query'
 
-import { glyphs, setButtonIcon } from '@/app/icon.ts'
 import {
   hydrateBoot,
   type LifeParams,
@@ -27,6 +26,7 @@ const zoomLabel = mustGet('#zoom-label', HTMLOutputElement)
 const fgInput = mustGet('#fg', HTMLInputElement)
 const bgInput = mustGet('#bg', HTMLInputElement)
 const gridInput = mustGet('#grid', HTMLInputElement)
+const originInput = mustGet('#origin', HTMLInputElement)
 const modeSelect = mustGet('#mode', HTMLSelectElement)
 const spawnFields = mustGet('#spawn-fields', HTMLFieldSetElement)
 const spawnSelect = mustGet('#spawn', HTMLSelectElement)
@@ -50,13 +50,6 @@ const statusCursor = mustGet('#status-cursor', HTMLElement)
 const statusPattern = mustGet('#status-pattern', HTMLElement)
 const statusState = mustGet('#status-state', HTMLElement)
 
-setButtonIcon(resetBtn, glyphs.reset)
-setButtonIcon(clearBtn, glyphs.clear)
-setButtonIcon(centerBtn, glyphs.center)
-setButtonIcon(prevBtn, glyphs.prev)
-setButtonIcon(nextBtn, glyphs.next)
-setButtonIcon(seedRandomBtn, glyphs.seed)
-
 function readMode(): LifeParams['mode'] {
   return modeSelect.value === 'inspect' ? 'inspect' : 'spawn'
 }
@@ -72,6 +65,7 @@ function formState(): LifeParams {
     fg: fgInput.value,
     bg: bgInput.value,
     grid: gridInput.checked,
+    origin: originInput.checked,
     mode: readMode(),
     spawn: spawnSelect.value,
     rot: parseRotation(Number(spawnRotSelect.value) || 0),
@@ -112,6 +106,7 @@ zoomLabel.textContent = `${initial.zoom}px`
 fgInput.value = initial.fg
 bgInput.value = initial.bg
 gridInput.checked = initial.grid
+originInput.checked = initial.origin
 modeSelect.value = initial.mode === 'inspect' ? 'inspect' : 'spawn'
 spawnSelect.value = initial.spawn
 spawnRotSelect.value = String(initial.rot)
@@ -125,6 +120,7 @@ const game = new Conway(canvas, {
   foreground: initial.fg,
   background: initial.bg,
   showGrid: initial.grid,
+  showOrigin: initial.origin,
 })
 
 function syncCanvasCursor(panning = false): void {
@@ -177,7 +173,7 @@ function syncPlayUi(running: boolean): void {
   const labels = runningLabels(running)
   const action = running ? 'Pause simulation' : 'Play simulation'
   statusState.textContent = labels.state
-  setButtonIcon(playBtn, running ? glyphs.pause : glyphs.play)
+  // Icons live in HTML; aria-pressed toggles play ↔ pause via CSS.
   playBtn.title = action
   playBtn.setAttribute('aria-label', action)
   playBtn.setAttribute('aria-pressed', labels.pressed)
@@ -248,6 +244,7 @@ function applyFormToGame({
   game.setZoom(state.zoom, zoomFocus)
   game.setColors(state.fg, state.bg)
   game.setShowGrid(state.grid)
+  game.setShowOrigin(state.origin)
   syncGhost()
   syncModeUi()
 

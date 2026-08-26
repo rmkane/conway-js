@@ -16,14 +16,13 @@ describe('viewCellCounts', () => {
 })
 
 describe('viewBounds', () => {
-  it('centers a half-open window on the origin', () => {
-    // cols=11, rows=6 → min = floor(origin - count/2)
-    // floor(0 - 5.5) = -6, floor(0 - 3) = -3
+  it('puts the camera origin at the CSS canvas center', () => {
+    // min = origin - css/(2*cell); world (0,0) → screen (cssW/2, cssH/2)
     expect(viewBounds(0, 0, 100, 50, 10)).toEqual({
-      minX: -6,
-      minY: -3,
-      maxX: 5,
-      maxY: 3,
+      minX: -5,
+      minY: -2.5,
+      maxX: 6,
+      maxY: 3.5,
       cols: 11,
       rows: 6,
     })
@@ -32,10 +31,10 @@ describe('viewBounds', () => {
   it('shifts with the camera origin', () => {
     const b = viewBounds(10, 20, 100, 50, 10)
     expect(b).toEqual({
-      minX: 4,
-      minY: 17,
-      maxX: 15,
-      maxY: 23,
+      minX: 5,
+      minY: 17.5,
+      maxX: 16,
+      maxY: 23.5,
       cols: 11,
       rows: 6,
     })
@@ -43,10 +42,16 @@ describe('viewBounds', () => {
 })
 
 describe('worldFromCanvas', () => {
-  it('is the min-zoom window centered on the origin', () => {
-    expect(worldFromCanvas(100, 50)).toEqual(
-      viewBounds(0, 0, 100, 50, MIN_CELL_SIZE),
-    )
+  it('is an integer min-zoom window centered on the origin', () => {
+    const { cols, rows } = viewCellCounts(100, 50, MIN_CELL_SIZE)
+    expect(worldFromCanvas(100, 50)).toEqual({
+      minX: Math.floor(-100 / (2 * MIN_CELL_SIZE)),
+      minY: Math.floor(-50 / (2 * MIN_CELL_SIZE)),
+      maxX: Math.floor(-100 / (2 * MIN_CELL_SIZE)) + cols,
+      maxY: Math.floor(-50 / (2 * MIN_CELL_SIZE)) + rows,
+      cols,
+      rows,
+    })
   })
 
   it('is larger than a zoomed-in paint window', () => {

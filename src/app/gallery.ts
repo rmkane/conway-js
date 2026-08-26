@@ -1,6 +1,5 @@
 import { el, mustGet } from '@conway/dom'
 
-import { glyphs, setButtonIcon } from '@/app/icon.ts'
 import {
   type AliveSet,
   bbox,
@@ -298,7 +297,7 @@ speedInput.addEventListener('input', () => {
 
 function syncToggleUi(): void {
   const action = running ? 'Pause gallery animation' : 'Play gallery animation'
-  setButtonIcon(toggleButton, running ? glyphs.pause : glyphs.play)
+  // Icons live in HTML; aria-pressed toggles play ↔ pause via CSS.
   toggleButton.title = action
   toggleButton.setAttribute('aria-label', action)
   toggleButton.setAttribute('aria-pressed', running ? 'true' : 'false')

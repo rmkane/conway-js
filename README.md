@@ -74,6 +74,7 @@ scripts/install-hooks.sh
 | `fg`              | Alive cell color (`rrggbb`, no `#`)                     |
 | `bg`              | Background color (`rrggbb`, no `#`)                     |
 | `grid`            | Show cell grid (`1` / `0`)                              |
+| `origin`          | Show world-origin crosshair (`1` / `0`)                 |
 | `mode`            | Board interaction: `spawn` or `inspect`                 |
 | `spawn`           | Pattern id for spawn mode (`glider`, …)                 |
 | `rot`             | Spawn orientation: `0`, `90`, `180`, or `270`           |

@@ -43,8 +43,7 @@
     "@conway/dom": "workspace:*",
     "@conway/geom": "workspace:*",
     "@conway/query": "workspace:*",
-    "@conway/rng": "workspace:*",
-    "lucide": "^1.34.0"
+    "@conway/rng": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

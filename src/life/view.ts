@@ -27,8 +27,8 @@ export function viewCellCounts(
 }
 
 /**
- * World-cell bounds for a view centered on `(originX, originY)`.
- * Paint uses the current zoom; the fixed stage uses {@link worldFromCanvas}.
+ * World-cell bounds for a view whose camera origin sits at the CSS canvas center.
+ * `minX`/`minY` are continuous so zoom-to-cursor can keep a focus point stable.
  */
 export function viewBounds(
   originX: number,
@@ -38,8 +38,8 @@ export function viewBounds(
   cellSize: number,
 ): ViewBounds {
   const { cols, rows } = viewCellCounts(cssW, cssH, cellSize)
-  const minX = Math.floor(originX - cols / 2)
-  const minY = Math.floor(originY - rows / 2)
+  const minX = originX - cssW / (2 * cellSize)
+  const minY = originY - cssH / (2 * cellSize)
   return {
     minX,
     minY,
@@ -51,10 +51,20 @@ export function viewBounds(
 }
 
 /**
- * Fixed stage centered on the world origin: canvas coverage at {@link MIN_CELL_SIZE}.
+ * Fixed integer stage centered on the world origin: canvas coverage at {@link MIN_CELL_SIZE}.
  */
 export function worldFromCanvas(cssW: number, cssH: number): ViewBounds {
-  return viewBounds(0, 0, cssW, cssH, MIN_CELL_SIZE)
+  const { cols, rows } = viewCellCounts(cssW, cssH, MIN_CELL_SIZE)
+  const minX = Math.floor(-cssW / (2 * MIN_CELL_SIZE))
+  const minY = Math.floor(-cssH / (2 * MIN_CELL_SIZE))
+  return {
+    minX,
+    minY,
+    maxX: minX + cols,
+    maxY: minY + rows,
+    cols,
+    rows,
+  }
 }
 
 /**

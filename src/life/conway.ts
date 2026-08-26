@@ -9,6 +9,7 @@ import {
   type Camera,
   cellAtClient,
   centerCameraOnAlive,
+  centerCameraOnOrigin,
   clampCamera,
   createCamera,
   panCamera,
@@ -43,6 +44,7 @@ export interface ConwayOptions {
   foreground?: string
   background?: string
   showGrid?: boolean
+  showOrigin?: boolean
 }
 
 export interface RandomSeedOptions {
@@ -66,6 +68,7 @@ export class Conway {
   foreground: string
   background: string
   showGrid: boolean
+  showOrigin: boolean
 
   running = false
   hoverCell: Point | null = null
@@ -91,6 +94,7 @@ export class Conway {
     this.foreground = options.foreground ?? '#111111'
     this.background = options.background ?? '#ffffff'
     this.showGrid = options.showGrid ?? false
+    this.showOrigin = options.showOrigin ?? false
   }
 
   onChange(fn: (game: Conway) => void): void {
@@ -144,14 +148,16 @@ export class Conway {
     const cssH = this.canvas.clientHeight
     if (focus && cssW >= 1 && cssH >= 1) {
       const rect = this.canvas.getBoundingClientRect()
-      zoomCameraAt(
-        this.camera,
-        cellSize,
-        focus.clientX - rect.left,
-        focus.clientY - rect.top,
-        cssW,
-        cssH,
-      )
+      // Map client → CSS canvas space (rect size can differ from clientWidth).
+      const localX =
+        rect.width > 0
+          ? ((focus.clientX - rect.left) / rect.width) * cssW
+          : focus.clientX - rect.left
+      const localY =
+        rect.height > 0
+          ? ((focus.clientY - rect.top) / rect.height) * cssH
+          : focus.clientY - rect.top
+      zoomCameraAt(this.camera, cellSize, localX, localY, cssW, cssH)
     } else {
       setCameraZoom(this.camera, cellSize)
     }
@@ -168,6 +174,11 @@ export class Conway {
 
   setShowGrid(showGrid: boolean): void {
     this.showGrid = showGrid
+    this.scheduleRender()
+  }
+
+  setShowOrigin(showOrigin: boolean): void {
+    this.showOrigin = showOrigin
     this.scheduleRender()
   }
 
@@ -229,17 +240,16 @@ export class Conway {
   /** Empty the board (keeps the random seed for Reset). */
   clear(options: { render?: boolean } = {}): void {
     clearScene(this.scene)
-    this.camera.originX = 0
-    this.camera.originY = 0
+    centerCameraOnOrigin(this.camera)
     this._syncWorld()
     this._clampCamera()
     if (options.render !== false) this.scheduleRender()
     this._emit()
   }
 
-  /** Snap the camera to the live population (or world origin if empty). */
+  /** Snap the camera to world origin (0, 0). */
   centerView(): void {
-    centerCameraOnAlive(this.camera, this.scene.alive)
+    centerCameraOnOrigin(this.camera)
     this._clampCamera()
     this.scheduleRender()
   }
@@ -306,6 +316,7 @@ export class Conway {
       foreground: this.foreground,
       background: this.background,
       showGrid: this.showGrid,
+      showOrigin: this.showOrigin,
       mode: this.mode,
       hoverCell: this.hoverCell,
       hoverMatch: this.hoverMatch,
