@@ -138,13 +138,13 @@ ifndef KIND
 endif
 	$(PNPM) version --no-git-tag-version $(KIND)
 
-version-commit: ## Commit version change (message: vX.Y.Z)
+version-commit: ## Commit version change (message: Bump version to X.Y.Z)
 	@if git diff --quiet HEAD -- package.json; then \
 		echo "package.json version is unchanged; nothing to commit" >&2; \
 		exit 1; \
 	fi
 	git add package.json pnpm-lock.yaml
-	git commit -m "$(APP_TAG)" -- package.json pnpm-lock.yaml
+	git commit -m "Bump version to $(APP_VERSION)" -- package.json pnpm-lock.yaml
 
 ##@ Release
 
