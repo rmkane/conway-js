@@ -1,5 +1,5 @@
 import { el, mustGet } from '@conway/dom'
-import { clamp, length, type Point, sub, vec } from '@conway/geom'
+import { clamp, type Point } from '@conway/geom'
 import { newSeedValue } from '@conway/query'
 
 import {
@@ -9,6 +9,7 @@ import {
   writeParams,
 } from '@/app/params.ts'
 import { mountAppVersion } from '@/app/version.ts'
+import { attachCameraControls } from '@/life/camera-controls.ts'
 import { Conway } from '@/life/conway.ts'
 import { LIFE_PATTERNS } from '@/life/data.ts'
 import {
@@ -276,24 +277,6 @@ seedRandomBtn.addEventListener('click', () => {
   applyFormToGame({ resetSeed: true })
 })
 
-let pointerClient: Point | null = null
-
-const PAN_THRESHOLD_PX = 4
-
-type PanDrag = {
-  pointerId: number
-  start: Point
-  last: Point
-  active: boolean
-}
-
-let panDrag: PanDrag | null = null
-let suppressClick = false
-
-function clientPoint(event: Pick<MouseEvent, 'clientX' | 'clientY'>): Point {
-  return vec(event.clientX, event.clientY)
-}
-
 function syncHoverFromClient(client: Point): void {
   const cell = game.cellAtClient(client)
   setCursorStatus(cell)
@@ -301,27 +284,37 @@ function syncHoverFromClient(client: Point): void {
   syncPatternStatus()
 }
 
-function applyZoom(cellSize: number): void {
-  zoomInput.value = String(clamp(cellSize, 2, 48))
-  zoomLabel.textContent = `${zoomInput.value}px`
-  applyFormToGame({ zoomFocus: pointerClient ?? undefined })
-  if (pointerClient) syncHoverFromClient(pointerClient)
+function clearHover(): void {
+  setCursorStatus(null)
+  game.setHoverCell(null)
+  syncPatternStatus()
 }
 
-zoomInput.addEventListener('input', () => {
-  applyZoom(Number(zoomInput.value))
+function applyZoom(cellSize: number, focus?: Point): void {
+  zoomInput.value = String(clamp(cellSize, 2, 48))
+  zoomLabel.textContent = `${zoomInput.value}px`
+  applyFormToGame({ zoomFocus: focus })
+  if (focus) syncHoverFromClient(focus)
+}
+
+const controls = attachCameraControls(canvas, {
+  getZoom: () => Number(zoomInput.value),
+  onPan: (delta) => {
+    game.panBy(delta)
+    const client = controls.pointerClient()
+    if (client) syncHoverFromClient(client)
+  },
+  onZoom: (cellSize, focus) => applyZoom(cellSize, focus),
+  onPointer: (client) => {
+    if (client) syncHoverFromClient(client)
+    else clearHover()
+  },
+  onGesture: (active) => syncCanvasCursor(active),
 })
 
-canvas.addEventListener(
-  'wheel',
-  (event) => {
-    event.preventDefault()
-    pointerClient = clientPoint(event)
-    const step = event.deltaY > 0 ? -1 : 1
-    applyZoom(Number(zoomInput.value) + step)
-  },
-  { passive: false },
-)
+zoomInput.addEventListener('input', () => {
+  applyZoom(Number(zoomInput.value), controls.pointerClient() ?? undefined)
+})
 
 fgInput.addEventListener('input', () => applyFormToGame())
 bgInput.addEventListener('input', () => applyFormToGame())
@@ -355,7 +348,8 @@ clearBtn.addEventListener('click', () => {
 
 centerBtn.addEventListener('click', () => {
   game.centerView()
-  if (pointerClient) syncHoverFromClient(pointerClient)
+  const client = controls.pointerClient()
+  if (client) syncHoverFromClient(client)
 })
 
 function syncSpeedFromInput(): number {
@@ -378,69 +372,8 @@ function setCursorStatus(cell: { x: number; y: number } | null): void {
   statusCursor.textContent = cell ? `${cell.x}, ${cell.y}` : '—'
 }
 
-function endPan(event: PointerEvent): void {
-  if (!panDrag || event.pointerId !== panDrag.pointerId) return
-  if (panDrag.active) suppressClick = true
-  panDrag = null
-  if (canvas.hasPointerCapture(event.pointerId)) {
-    canvas.releasePointerCapture(event.pointerId)
-  }
-  syncCanvasCursor()
-}
-
-canvas.addEventListener('pointerdown', (event) => {
-  if (event.pointerType === 'mouse' && event.button !== 0) return
-  if (panDrag) return
-  const client = clientPoint(event)
-  panDrag = {
-    pointerId: event.pointerId,
-    start: client,
-    last: client,
-    active: false,
-  }
-  pointerClient = client
-  canvas.setPointerCapture(event.pointerId)
-})
-
-canvas.addEventListener('pointermove', (event) => {
-  const client = clientPoint(event)
-  pointerClient = client
-
-  if (panDrag && event.pointerId === panDrag.pointerId) {
-    if (!panDrag.active) {
-      if (length(sub(client, panDrag.start)) < PAN_THRESHOLD_PX) {
-        syncHoverFromClient(client)
-        return
-      }
-      panDrag.active = true
-      syncCanvasCursor(true)
-    }
-    const delta = sub(client, panDrag.last)
-    panDrag.last = client
-    game.panBy(delta)
-    syncHoverFromClient(client)
-    return
-  }
-
-  syncHoverFromClient(client)
-})
-
-canvas.addEventListener('pointerup', endPan)
-canvas.addEventListener('pointercancel', endPan)
-
-canvas.addEventListener('pointerleave', () => {
-  if (panDrag) return
-  pointerClient = null
-  setCursorStatus(null)
-  game.setHoverCell(null)
-  syncPatternStatus()
-})
-
 canvas.addEventListener('click', (event) => {
-  if (suppressClick) {
-    suppressClick = false
-    return
-  }
+  if (controls.consumeClick()) return
   if (modeSelect.value !== 'spawn') return
   const cell = game.cellAtEvent(event)
   if (!cell) return
