@@ -44,6 +44,25 @@ export function stepAlive(alive: AliveSet): AliveSet {
   return next
 }
 
+/**
+ * Keep only cells in the half-open window [minX, maxX) × [minY, maxY).
+ * Used to drop patterns that have left the visible board.
+ */
+export function clipAlive(
+  alive: AliveSet,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): AliveSet {
+  const next: AliveSet = new Set()
+  for (const key of alive) {
+    const [x, y] = unpack(key)
+    if (x >= minX && y >= minY && x < maxX && y < maxY) next.add(key)
+  }
+  return next
+}
+
 export function bbox(alive: AliveSet): {
   minX: number
   minY: number

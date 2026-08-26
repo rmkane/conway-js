@@ -9,6 +9,7 @@ import {
 import {
   type AliveSet,
   bbox,
+  clipAlive,
   cloneAlive,
   pack,
   stepAlive,
@@ -17,6 +18,7 @@ import { CATALOG_INDEX, identifyAt, type PatternHit } from '@/life/identify.ts'
 import { paintLife } from '@/life/paint.ts'
 import { patternOffsets } from '@/life/pattern.ts'
 import { randomSoup } from '@/life/rng.ts'
+import { MIN_CELL_SIZE, viewBounds } from '@/life/view.ts'
 
 const HISTORY_LIMIT = 1000
 
@@ -205,10 +207,7 @@ export class Conway {
 
   /** Advance one generation. Safe to spam; paint is debounced. */
   next(): void {
-    this.history.push(cloneAlive(this.alive))
-    if (this.history.length > HISTORY_LIMIT) this.history.shift()
-    this.alive = stepAlive(this.alive)
-    this.generation += 1
+    this._stepOnce()
     this.scheduleRender()
     this._emit()
   }
@@ -235,10 +234,7 @@ export class Conway {
     const maxSteps = 32
 
     while (acc >= interval && steps < maxSteps) {
-      this.history.push(cloneAlive(this.alive))
-      if (this.history.length > HISTORY_LIMIT) this.history.shift()
-      this.alive = stepAlive(this.alive)
-      this.generation += 1
+      this._stepOnce()
       acc -= interval
       steps += 1
     }
@@ -294,19 +290,20 @@ export class Conway {
   }
 
   resize(): void {
+    this._cullOffscreen()
     this.scheduleRender()
   }
 
   /** Top-left world cell currently mapped to canvas (0, 0). */
   viewOrigin(): Point {
-    const cssW = this.canvas.clientWidth
-    const cssH = this.canvas.clientHeight
-    const cols = Math.ceil(cssW / this.cellSize) + 1
-    const rows = Math.ceil(cssH / this.cellSize) + 1
-    return {
-      x: Math.floor(this.originX - cols / 2),
-      y: Math.floor(this.originY - rows / 2),
-    }
+    const b = viewBounds(
+      this.originX,
+      this.originY,
+      this.canvas.clientWidth,
+      this.canvas.clientHeight,
+      this.cellSize,
+    )
+    return { x: b.minX, y: b.minY }
   }
 
   /** Map client coordinates on the canvas to world cell coordinates. */
@@ -338,6 +335,35 @@ export class Conway {
     const { minX, minY, maxX, maxY } = bbox(alive)
     this.originX = (minX + maxX + 1) / 2
     this.originY = (minY + maxY + 1) / 2
+  }
+
+  /** One generation: push history, step B3/S23, drop off-screen cells. */
+  private _stepOnce(): void {
+    this.history.push(cloneAlive(this.alive))
+    if (this.history.length > HISTORY_LIMIT) this.history.shift()
+    this.alive = stepAlive(this.alive)
+    this._cullOffscreen()
+    this.generation += 1
+  }
+
+  /**
+   * Drop live cells outside the canvas at minimum zoom (widest world window).
+   * Current zoom only affects painting; zooming in must not untrack cells.
+   */
+  private _cullOffscreen(): void {
+    const cssW = this.canvas.clientWidth
+    const cssH = this.canvas.clientHeight
+    if (cssW < 1 || cssH < 1 || !this.alive.size) return
+
+    const { minX, minY, maxX, maxY } = viewBounds(
+      this.originX,
+      this.originY,
+      cssW,
+      cssH,
+      MIN_CELL_SIZE,
+    )
+    const next = clipAlive(this.alive, minX, minY, maxX, maxY)
+    if (next.size !== this.alive.size) this.alive = next
   }
 
   private _refreshHoverMatch(): void {

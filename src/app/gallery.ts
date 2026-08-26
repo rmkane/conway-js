@@ -3,11 +3,11 @@ import { el, mustGet } from '@conway/dom'
 import {
   type AliveSet,
   bbox,
+  clipAlive,
   homeAlive,
   pack,
   shiftAlive,
   stepAlive,
-  unpack,
 } from '@/life/cells.ts'
 import {
   LIFE_PATTERNS,
@@ -79,16 +79,6 @@ function boardLayout(
   return { cols, rows, alive: homeAlive(parsed.alive, cols, rows) }
 }
 
-/** Drop cells that left the visible board (guns emit ships forever). */
-function clipAlive(alive: AliveSet, cols: number, rows: number): AliveSet {
-  const next: AliveSet = new Set()
-  for (const key of alive) {
-    const [x, y] = unpack(key)
-    if (x >= 0 && y >= 0 && x < cols && y < rows) next.add(key)
-  }
-  return next
-}
-
 function prepareTransition(item: GalleryItem): void {
   if (item.pattern.period === 1) {
     item.pendingAlive = item.alive
@@ -107,7 +97,7 @@ function prepareTransition(item: GalleryItem): void {
   } else {
     item.moveX = 0
     item.moveY = 0
-    item.pendingAlive = clipAlive(next, item.cols, item.rows)
+    item.pendingAlive = clipAlive(next, 0, 0, item.cols, item.rows)
   }
 }
 

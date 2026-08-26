@@ -7,6 +7,7 @@ import {
 
 import { type AliveSet, pack, unpack } from '@/life/cells.ts'
 import type { PatternHit } from '@/life/identify.ts'
+import { viewBounds } from '@/life/view.ts'
 
 type PaintView = {
   cssW: number
@@ -90,16 +91,20 @@ function beginFrame(scene: PaintScene): PaintView | null {
   ctx.fillStyle = scene.background
   ctx.fillRect(0, 0, cssW, cssH)
 
-  const cols = Math.ceil(cssW / cellSize) + 1
-  const rows = Math.ceil(cssH / cellSize) + 1
+  const {
+    cols,
+    rows,
+    minX: ox,
+    minY: oy,
+  } = viewBounds(scene.originX, scene.originY, cssW, cssH, cellSize)
   return {
     cssW,
     cssH,
     cellSize,
     cols,
     rows,
-    ox: Math.floor(scene.originX - cols / 2),
-    oy: Math.floor(scene.originY - rows / 2),
+    ox,
+    oy,
   }
 }
 
