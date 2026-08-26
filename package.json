@@ -39,7 +39,8 @@
     "hooks": "./scripts/install-hooks.sh",
     "precommit": "oxfmt --check && oxlint && vitest run && tsc --noEmit",
     "update": "pnpm update",
-    "upgrade": "pnpm update --latest"
+    "upgrade": "pnpm update --latest",
+    "version:show": "pnpm pkg get version"
   },
   "dependencies": {
     "@conway/dom": "workspace:*",
