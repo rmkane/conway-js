@@ -15,6 +15,12 @@ import {
   type PatternCategory,
 } from '@/life/data.ts'
 import { parseShape } from '@/life/shape.ts'
+import {
+  BASE_GALLERY_GENERATION_MS,
+  formatSpeedFactor,
+  generationIntervalMs,
+  snapSpeedFactor,
+} from '@/life/timing.ts'
 
 import '@/styles/main.css'
 
@@ -44,8 +50,15 @@ const toggleButton = mustGet('#toggle', HTMLButtonElement)
 if (simLink) simLink.href = `./index.html${location.search}`
 
 let running = true
-let generationDuration = Number(speedInput.value)
+let generationDuration = generationIntervalMs(1, BASE_GALLERY_GENERATION_MS)
 let generationStartedAt = 0
+
+function syncSpeedFromInput(): number {
+  const factor = snapSpeedFactor(Number(speedInput.value))
+  speedInput.value = String(factor)
+  speedLabel.textContent = formatSpeedFactor(factor)
+  return generationIntervalMs(factor, BASE_GALLERY_GENERATION_MS)
+}
 
 /** Gallery boards add margin so oscillators/ships can move without clipping. */
 function boardPad(pattern: LifePattern): {
@@ -279,8 +292,7 @@ function tick(now: number): void {
 }
 
 speedInput.addEventListener('input', () => {
-  generationDuration = Number(speedInput.value)
-  speedLabel.textContent = `${generationDuration} ms`
+  generationDuration = syncSpeedFromInput()
 })
 
 function syncToggleUi(): void {
@@ -299,6 +311,6 @@ toggleButton.addEventListener('click', () => {
 
 syncToggleUi()
 
-speedLabel.textContent = `${generationDuration} ms`
+generationDuration = syncSpeedFromInput()
 document.documentElement.classList.remove('boot-pending')
 requestAnimationFrame(tick)

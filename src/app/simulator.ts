@@ -10,11 +10,9 @@ import {
 import { Conway } from '@/life/conway.ts'
 import { LIFE_PATTERNS } from '@/life/data.ts'
 import {
-  DEFAULT_SPEED_FACTOR,
   formatSpeedFactor,
   generationIntervalMs,
-  SPEED_FACTORS,
-  type SpeedFactor,
+  snapSpeedFactor,
 } from '@/life/timing.ts'
 
 import '@/styles/main.css'
@@ -352,20 +350,6 @@ centerBtn.addEventListener('click', () => {
   game.centerView()
   if (pointerClient) syncHoverFromClient(pointerClient.x, pointerClient.y)
 })
-
-function snapSpeedFactor(raw: number): SpeedFactor {
-  if (!Number.isFinite(raw)) return DEFAULT_SPEED_FACTOR
-  let best: SpeedFactor = DEFAULT_SPEED_FACTOR
-  let bestDist = Infinity
-  for (const factor of SPEED_FACTORS) {
-    const dist = Math.abs(factor - raw)
-    if (dist < bestDist) {
-      best = factor
-      bestDist = dist
-    }
-  }
-  return best
-}
 
 function syncSpeedFromInput(): number {
   const factor = snapSpeedFactor(Number(speedInput.value))

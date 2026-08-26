@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  BASE_GALLERY_GENERATION_MS,
   BASE_GENERATION_MS,
   formatSpeedFactor,
   generationIntervalMs,
+  snapSpeedFactor,
 } from '@/life/timing.ts'
 
 describe('timing', () => {
-  it('uses 40ms at 1×', () => {
+  it('uses 40ms at 1× on the simulator', () => {
     expect(BASE_GENERATION_MS).toBe(40)
     expect(generationIntervalMs(1)).toBe(40)
   })
@@ -17,9 +19,21 @@ describe('timing', () => {
     expect(generationIntervalMs(2)).toBe(20)
   })
 
+  it('uses a slower gallery base at 1×', () => {
+    expect(BASE_GALLERY_GENERATION_MS).toBe(350)
+    expect(generationIntervalMs(1, BASE_GALLERY_GENERATION_MS)).toBe(350)
+    expect(generationIntervalMs(2, BASE_GALLERY_GENERATION_MS)).toBe(175)
+  })
+
   it('formats factors with two fixed decimals', () => {
     expect(formatSpeedFactor(1)).toBe('1.00×')
     expect(formatSpeedFactor(0.25)).toBe('0.25×')
     expect(formatSpeedFactor(1.5)).toBe('1.50×')
+  })
+
+  it('snaps to the nearest stepped factor', () => {
+    expect(snapSpeedFactor(0.3)).toBe(0.25)
+    expect(snapSpeedFactor(1.1)).toBe(1)
+    expect(snapSpeedFactor(1.9)).toBe(2)
   })
 })

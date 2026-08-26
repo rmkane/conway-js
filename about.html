@@ -85,19 +85,21 @@
         for="speed"
         class="flex items-center gap-2 text-sm whitespace-nowrap text-zinc-500 dark:text-zinc-400"
       >
-        Frame time
+        Speed
         <input
           id="speed"
           type="range"
-          min="80"
-          max="1200"
-          step="20"
-          value="350"
-          class="w-35"
-          title="Milliseconds per gallery generation"
+          min="0.25"
+          max="2"
+          step="0.25"
+          value="1"
+          class="w-28 sm:w-35"
+          title="Playback speed (1× = 350ms per gallery generation)"
           aria-describedby="speed-label"
         />
-        <span id="speed-label"></span>
+        <span id="speed-label" class="inline-block min-w-[4.5ch] tabular-nums"
+          >1.00×</span
+        >
       </label>
     </div>
 
