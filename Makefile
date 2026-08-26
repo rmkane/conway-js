@@ -2,7 +2,7 @@ PNPM ?= pnpm
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install hooks precommit dev build preview format format-check lint test test-watch \
+.PHONY: help install hooks precommit update upgrade dev build preview format format-check lint test test-watch \
 	analyze analyze-full analyze-dead-code analyze-dupes analyze-health analyze-hotspots \
 	analyze-targets analyze-audit analyze-security analyze-flags analyze-list analyze-viz \
 	analyze-watch analyze-fix dead-code dupes check clean typecheck
@@ -20,6 +20,12 @@ install: ## Install dependencies
 
 hooks: ## Install tracked git hooks (.githooks)
 	./scripts/install-hooks.sh
+
+update: ## Update deps within package.json ranges
+	$(PNPM) run update
+
+upgrade: ## Upgrade deps to latest (may bump majors)
+	$(PNPM) run upgrade
 
 ##@ Develop
 

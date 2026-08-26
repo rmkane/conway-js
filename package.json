@@ -37,7 +37,9 @@
     "analyze:watch": "fallow watch",
     "analyze:fix": "fallow fix",
     "hooks": "./scripts/install-hooks.sh",
-    "precommit": "oxfmt --check && oxlint && vitest run && tsc --noEmit"
+    "precommit": "oxfmt --check && oxlint && vitest run && tsc --noEmit",
+    "update": "pnpm update",
+    "upgrade": "pnpm update --latest"
   },
   "dependencies": {
     "@conway/dom": "workspace:*",
@@ -47,16 +49,16 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.2.0",
-    "fallow": "^3.14.0",
-    "happy-dom": "^20.11.2",
+    "@types/node": "^26.3.0",
+    "fallow": "^3.18.0",
+    "happy-dom": "^20.11.6",
     "oxfmt": "^0.63.0",
-    "oxlint": "^1.78.0",
+    "oxlint": "^1.80.0",
     "oxlint-tsgolint": "^7.0.2001",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.2.1",
-    "vitest": "^4.1.10"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@11.21.0"
 }
